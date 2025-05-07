@@ -4,7 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_cube(vertices):
+def plot_cube(vertices, key=None):
     """
     Function for plotting a CUBE.
 
@@ -14,7 +14,10 @@ def plot_cube(vertices):
     """
     # Processing the faces for the cube: 
     # The array 'faces_vertices' is based on a predefined convention
-    faces_vertices = np.asarray([[0,4,7,3], [0,1,5,4], [1,2,6,5], [3,7,6,2], [4,5,6,7], [0,1,2,3]])
+    if key == 'pc':
+        faces_vertices = np.asarray([[1,0,3,6], [0,2,5,3], [2,7,4,5], [7,1,6,4], [1,0,2,7], [6,3,5,4]])
+    else:
+        faces_vertices = np.asarray([[0,4,7,3], [0,1,5,4], [1,2,6,5], [3,7,6,2], [4,5,6,7], [0,1,2,3]])
     
     # Initialize a list of vertex coordinates for each face
     faces = []

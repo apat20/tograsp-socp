@@ -11,16 +11,6 @@ from scipy.spatial import ConvexHull
 # Matplotlib for plotting and visualization in Python:
 import matplotlib.pyplot as plt
 
-# PyTorch for Neural Network Approximation: 
-import torch 
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from neural_network_module.neural_net import metric_nn
-from neural_network_module.neural_net import metric_nn_generic
-from neural_network_module.data_loader import metric_nn_dataset
-from neural_network_module.data_loader import to_tensor
-
 from collections import Counter
 
 class point_cloud(object):

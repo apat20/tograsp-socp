@@ -3,34 +3,18 @@
        given the unit screw. The unit screw parameterizes the constant screw motion to be
        imparted to the object after grasping.
     2) Computing 6-DOF end-effector poses corresponding to the computing grasping region.
+    3) Given a constant screw motion represented using a screw axis (unit vector and a point), 
+       a second order cone program and the bounding box corresponding to the object's point cloud
+       is used to compute the grasping region.
 
     NOTE: This class inherits the properties of the point_cloud class defined in process_point_cloud.py
 
     By: Aditya Patankar
 '''
 
-# Open3D for point cloud processing and visualization
-import open3d as o3d
-
 import numpy as np
-import math
 from numpy import linalg as la
-from scipy.spatial import ConvexHull
 
-# Matplotlib for plotting and visualization in Python:
-import matplotlib.pyplot as plt
-
-# PyTorch for Neural Network Approximation: 
-import torch 
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
-from neural_network_module.neural_net import metric_nn
-from neural_network_module.neural_net import metric_nn_generic
-from neural_network_module.data_loader import metric_nn_dataset
-from neural_network_module.data_loader import to_tensor
-
-from point_cloud_module.process_point_cloud import point_cloud
 
 class tograsp():
 
@@ -69,7 +53,7 @@ class tograsp():
         self.batch_size = 2
 
         self.test_datapoints = None
-        self.predicted = None 
+        self.computed = None 
         self.ground_truth = None
 
         # Attributes associated with Point Cloud Projection, Grid Generation and Occupancy checking
@@ -414,174 +398,6 @@ class tograsp():
        else:
            print('Invalid Data')
 
-    '''This function is used to predict the metric values using the datapoints as input'''
-    def predict_metric(self):
-      # OLDER NEURAL NETWORK
-      # NEURAL NETWORK BASED METRIC PREDICTION: 
-      # HYPER PARAMETERS: 
-      # (1) Network Size:
-      self.input_size = 12
-      self.hidden_size1 = 8
-      self.hidden_size2 = 3
-
-      # Batch size to divide the dataset into batches:
-      self.batch_size = 2
-
-      # Defining the neural network model
-      model = metric_nn(self.input_size, self.hidden_size1, self.hidden_size2)
-
-      # Loading the trained models: 
-      # PATH = 'Trained_Models/model8_150epochs_lr001.pth'
-      PATH = 'Trained_Models/model6_100epochs_lr001.pth'
-      # PATH = 'Trained_Models/model8_150epochs_lr001_1.pth'
-      # PATH = 'Trained_Models/model1_100epochs_lr0001.pth'
-
-      model.load_state_dict(torch.load(PATH))
-
-      testing_dataset = metric_nn_dataset(self.x_data, self.y_data, transform = transforms.Compose([to_tensor()]))
-
-      # Using the DataLoader class from Pytorch to shuffle the data and divide it into batches:
-      testLoader = DataLoader(testing_dataset, self.batch_size, 
-                                 shuffle=True, num_workers=0)
-
-      print('Weights Loaded!')
-      # TESTING LOOP:
-      output_predicted = []
-      output_ground_truth = []
-      output_test_datapoints = []
-      model.eval()
-      with torch.no_grad():
-         for i, test_batch in enumerate(testLoader):
-            outputs = model(test_batch['X'])
-            output_predicted.append(outputs.tolist())
-            # predicted.append(outputs.flatten().tolist())
-            output_test_datapoints.append(test_batch['X'].tolist())
-            output_ground_truth.append(test_batch['Y'].tolist())
-
-      # Extracting the output in the required format since the output of the neural network is in the form of 
-      # multidimensional array which includes datapoints grouped together in batches.
-      self.predicted = []
-      self.ground_truth = []
-      self.test_datapoints = []
-      for i, output in enumerate(output_test_datapoints):
-         if i != len(output_test_datapoints)-1:
-               for j,v in enumerate(output_test_datapoints[0]):
-                  self.predicted.append(output_predicted[i][j])
-                  self.ground_truth.append(output_ground_truth[i][j])
-                  self.test_datapoints.append(output_test_datapoints[i][j])
-         elif i == len(output_test_datapoints)-1:
-               for j in range(len(output_test_datapoints[len(output_test_datapoints)-1])):
-                  self.predicted.append(output_predicted[i][j])
-                  self.ground_truth.append(output_ground_truth[i][j])
-                  self.test_datapoints.append(output_test_datapoints[i][j])
-         else:
-               print('Invalid data!')
-
-      self.test_datapoints = np.asarray(self.test_datapoints)
-      self.predicted = np.asarray(self.predicted)
-      self.ground_truth = np.asarray(self.ground_truth)
-      # Normalizing the values between 0 and 1:
-      self.predicted = (self.predicted - np.min(self.predicted))/(np.max(self.predicted - np.min(self.predicted)))
-
-    '''This function is used to predict the metric values using the datapoints as input'''
-    def predict_metric_generic(self):
-      # NEWLY TRAINED NEURAL NETWORK
-      # NEURAL NETWORK BASED METRIC PREDICTION: 
-      # HYPER PARAMETERS: 
-      # (1) Network Size:
-
-      # Batch size to divide the dataset into batches:
-      # Hyperparameters that are part of the pointCloud class
-      self.batch_size = 400
-      # elf.input_size = 12
-      # self.input_size = 15
-      self.input_size = 18
-
-      # Specifying the seed:
-      seed = 3
-      torch.manual_seed(seed)
-
-      # Specifying the depth of the neural network:
-      depth = 8
-
-      # Batch norm:
-      norm = nn.BatchNorm1d
-
-      # Activation function:
-      act = nn.ReLU
-
-      # Defining the neural network model
-      model = metric_nn_generic(self.input_size, depth=depth, residual=True, norm=norm, act_layer=act) 
-      
-      ## Dataset: Variation 1
-      # Plucker:
-      # best_weights = 'depth_8_norm_batch_act_relu_residual_True_input_12_test_all_train_variation_1_plucker_extra_False.pth'
-      
-      # Non-Plucker
-
-      # Additional Features:
-      best_weights = 'depth_8_norm_batch_act_relu_residual_True_input_18_test_all_train_variation_1_additional_features_extra_True.pth'
-
-      ## Dataset: Variation 2
-      # Plucker:
-      #
-
-      # Non-Plucker:
-      # best_weights = 'depth_8_norm_batch_act_relu_residual_True_input_12_test_all_train_variation_2_plucker_extra_False.pth'
-
-      # Additional Features:
-      # best_weights = 'depth_8_norm_batch_act_relu_residual_True_input_18_test_all_train_variation_2_additional_features_extra_True.pth'
-
-      # Loading the trained models: 
-      PATH = 'Trained_Models/' + best_weights
-
-      model.load_state_dict(torch.load(PATH, map_location = 'cpu'))
-
-      testing_dataset = metric_nn_dataset(self.x_data, self.y_data, transform = transforms.Compose([to_tensor()]))
-
-      # Using the DataLoader class from Pytorch to shuffle the data and divide it into batches:
-      testLoader = DataLoader(testing_dataset, self.batch_size, 
-                                 shuffle=True, num_workers=0)
-
-      print('Weights Loaded!')
-      # TESTING LOOP:
-      output_predicted = []
-      output_ground_truth = []
-      output_test_datapoints = []
-      model.eval()
-      with torch.no_grad():
-         for i, test_batch in enumerate(testLoader):
-            outputs = model(test_batch['X'])
-            output_predicted.append(outputs.tolist())
-            # predicted.append(outputs.flatten().tolist())
-            output_test_datapoints.append(test_batch['X'].tolist())
-            output_ground_truth.append(test_batch['Y'].tolist())
-
-      # Extracting the output in the required format since the output of the neural network is in the form of 
-      # multidimensional array which includes datapoints grouped together in batches.
-      self.predicted = []
-      self.ground_truth = []
-      self.test_datapoints = []
-      for i, output in enumerate(output_test_datapoints):
-         if i != len(output_test_datapoints)-1:
-               for j,v in enumerate(output_test_datapoints[0]):
-                  self.predicted.append(output_predicted[i][j])
-                  self.ground_truth.append(output_ground_truth[i][j])
-                  self.test_datapoints.append(output_test_datapoints[i][j])
-         elif i == len(output_test_datapoints)-1:
-               for j in range(len(output_test_datapoints[len(output_test_datapoints)-1])):
-                  self.predicted.append(output_predicted[i][j])
-                  self.ground_truth.append(output_ground_truth[i][j])
-                  self.test_datapoints.append(output_test_datapoints[i][j])
-         else:
-               print('Invalid data!')
-
-      self.test_datapoints = np.asarray(self.test_datapoints)
-      self.predicted = np.asarray(self.predicted)
-      self.ground_truth = np.asarray(self.ground_truth)
-      # Normalizing the values between 0 and 1:
-      self.predicted = (self.predicted - np.min(self.predicted))/(np.max(self.predicted - np.min(self.predicted)))
-
     '''# Function to project the points onto a one of the surfaces of the bounding box:'''
     def project_points_yz(self):
       # PROJECTING THE POINTS ON TO ONE OF THE PLANES: 
@@ -649,17 +465,17 @@ class tograsp():
       self.z_counter = 0
       counter = 0
       
-      # Create a dictionary of test_datapoints and predicted metric values. 
-      '''This is being done to access the predicted metric values so that it can efficiently used for grid generation'''
+      # Create a dictionary of test_datapoints and computed metric values. 
+      '''This is being done to access the computed metric values so that it can efficiently used for grid generation'''
       dictionary_test_data = {}
-      for test_point, label in zip(self.test_datapoints, self.predicted):
+      for test_point, label in zip(self.test_datapoints, self.computed):
           test_point = np.around(test_point, 3)
           dictionary_test_data[tuple([test_point[0].item(), test_point[1].item(), test_point[2].item(), test_point[3].item(), 
                                       test_point[4].item(), test_point[5].item(),test_point[6].item(), test_point[7].item(), 
                                       test_point[8].item(), test_point[9].item(), test_point[10].item(), test_point[11].item()])] = label.item()
           
       # Query the dictionary for x_data to get the corresponding metric_values: 
-      self.metric_values = np.zeros([self.predicted.shape[0], self.predicted.shape[1]])
+      self.metric_values = np.zeros([self.computed.shape[0], self.computed.shape[1]])
       for i, x in enumerate(self.x_data):
           x = np.around(x, 3)    
           self.metric_values[i, :] = np.asarray(dictionary_test_data[tuple([x[0].item(), x[1].item(), x[2].item(), x[3].item(), 
@@ -748,17 +564,17 @@ class tograsp():
       self.z_counter = 0
       counter = 0
 
-      # Create a dictionary of test_datapoints and predicted metric values.
-      '''This is being done to access the predicted metric values so that it can efficiently used for grid generation'''
+      # Create a dictionary of test_datapoints and computed metric values.
+      '''This is being done to access the computed metric values so that it can efficiently used for grid generation'''
       dictionary_test_data = {}
-      for test_point, label in zip(self.test_datapoints, self.predicted):
+      for test_point, label in zip(self.test_datapoints, self.computed):
           test_point = np.around(test_point, 3)
           dictionary_test_data[tuple([test_point[0].item(), test_point[1].item(), test_point[2].item(), test_point[3].item(), 
                                       test_point[4].item(), test_point[5].item(),test_point[6].item(), test_point[7].item(), 
                                       test_point[8].item(), test_point[9].item(), test_point[10].item(), test_point[11].item()])] = label.item()
           
       # Query the dictionary for x_data to get the corresponding metric_values: 
-      self.metric_values = np.zeros([self.predicted.shape[0], self.predicted.shape[1]])
+      self.metric_values = np.zeros([self.computed.shape[0], self.computed.shape[1]])
       for i, x in enumerate(self.x_data):
           x = np.around(x, 3)    
           self.metric_values[i, :] = np.asarray(dictionary_test_data[tuple([x[0].item(), x[1].item(), x[2].item(), x[3].item(), 
@@ -1063,7 +879,7 @@ class tograsp():
 
       # Using the dimensions of the newer bounding box of the ideal grasping region:
       
-    '''Function to COMPUTE end effector poses based on the predicted metric values.'''
+    '''Function to COMPUTE end effector poses based on the computed metric values.'''
     # This function needs to be modified and updated: 
     def get_end_effector_poses(self):
 
