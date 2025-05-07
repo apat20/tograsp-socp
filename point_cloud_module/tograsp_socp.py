@@ -324,7 +324,7 @@ class tograsp():
 
       self.sampled_c1 = np.asarray([[x, self.cloud_object.transformed_vertices_object_frame[0,1], z] for z in self.z_axis_increments for x in self.x_axis_increments])
       self.sampled_c2 = np.asarray([[x, self.cloud_object.transformed_vertices_object_frame[2,1], z] for z in self.z_axis_increments for x in self.x_axis_increments])
-      self.x_data = np.asarray([np.reshape(np.asarray([[x, self.transformed_vertices_object_frame[0,1], z], [x, self.cloud_object.transformed_vertices_object_frame[2,1], z], 
+      self.x_data = np.asarray([np.reshape(np.asarray([[x, self.cloud_object.transformed_vertices_object_frame[0,1], z], [x, self.cloud_object.transformed_vertices_object_frame[2,1], z], 
                                                        self.unit_vector, self.moment]), [1,12]) for z in self.z_axis_increments for x in self.x_axis_increments])
       self.x_data = np.reshape(self.x_data, [self.x_data.shape[0], self.x_data.shape[1]*self.x_data.shape[2]])
       
