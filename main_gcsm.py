@@ -4,6 +4,7 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
+import math
 
 # Importing quaternion functionalities
 import func.quaternion_lib as ql
@@ -11,9 +12,6 @@ import func.quaternion_lib as ql
 # Import helper functions for visualisation
 from func.utils import plot_cube
 from func.utils import plot_reference_frames
-
-# Importing cvxpy to solve the GFOP:
-import cvxpy as cp
 
 # Functionalities for point cloud processing and computing the ideal grasping region:
 from point_cloud_module.process_point_cloud import point_cloud
@@ -150,7 +148,7 @@ def build_and_solve_gfop(gfop_object, grasp_object):
         gfop_object.p_OC_1 = np.reshape(grasp_object.sampled_c1[i], [3,1])
         gfop_object.p_OC_2 = np.reshape(grasp_object.sampled_c2[i], [3,1])
         # metric = gfop.computeMetric()
-        metric = gfop_object.compute_metric_force()
+        metric = gfop_object.compute_metric_moment()
         computed_metric_values.append(metric)
     return computed_metric_values
 
@@ -216,7 +214,7 @@ if __name__ == "__main__":
 
     # Filepath to save logs for visualization and debugging:
     log_dir = 'logs/'
-    trial = '1'
+    trial = '2'
 
     # Creating the cloud object and loading the necessary file:
     cloud = point_cloud()   
@@ -242,7 +240,13 @@ if __name__ == "__main__":
 
     # TASK-SPACE PATH: 
     # Intermediate pose 1:
-    R_inter_1, p_inter_1, g_inter_1 = np.eye(3), np.asarray([0, 0, 0.4]), np.eye(4)
+    # Rotation about X-axis:
+    # theta = math.radians(30)
+    theta = 30
+    R_theta_X = np.asarray([[1, 0, 0],
+                            [0, np.cos(theta), -np.sin(theta)],
+                            [0, np.sin(theta), np.cos(theta)]])
+    R_inter_1, p_inter_1, g_inter_1 = R_theta_X @ np.eye(3), np.asarray([0, 0.15, 0.4]), np.eye(4)
     g_inter_1[0:3, 0:3], g_inter_1[0:3, 3] = R_inter_1, p_inter_1
 
     # SCREW LINEAR INTERPOLATION TO COMPUTE THE TASK SPACE PATH:
@@ -305,14 +309,21 @@ if __name__ == "__main__":
     grasp.vertices = cloud.transformed_vertices_object_frame
     grasp.plot_cube()
     ax1.add_collection3d(Poly3DCollection(grasp.faces, linewidths=1, edgecolors='b', alpha=.25))
-    ax1.scatter(x_transformed_points, y_transformed_points, z_transformed_points, s = 0.2)
+    # ax1.scatter(x_transformed_points, y_transformed_points, z_transformed_points, s = 0.2)
 
-     # Visualize the screw axis: 
-    ax1.scatter(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], marker = '*', s = 100, color = 'r')
-    ax1.quiver(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], 0.25*grasp.unit_vector_base[0], 0.25*grasp.unit_vector_base[1], 0.25*grasp.unit_vector_base[2], color = "r", arrow_length_ratio = 0.25)
+    # # Visualize the screw axis (base reference frame): 
+    # ax1.scatter(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], marker = '*', s = 100, color = 'r')
+    # ax1.quiver(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], 0.25*grasp.unit_vector_base[0], 0.25*grasp.unit_vector_base[1], 0.25*grasp.unit_vector_base[2], color = "r", arrow_length_ratio = 0.25)
+
+    # Visualize the screw axis (original reference frame): 
+    ax1.scatter(point_1[0], point_1[1], point_1[2], marker = '*', s = 100, color = 'r')
+    ax1.quiver(point_1[0], point_1[1], point_1[2], 0.25*unit_vector_1[0], 0.25*unit_vector_1[1], 0.25*unit_vector_1[2], color = "r", arrow_length_ratio = 0.25)
 
     # Base configuration:
     ax1 = plot_reference_frames(g_base[0:3, 0:3], np.reshape(g_base[0:3, 3], [3]), 0.08, 0.08, ax1)
+
+    # Final configuration:
+    ax1 = plot_reference_frames(g_inter_1[0:3, 0:3], np.reshape(g_inter_1[0:3, 3], [3]), 0.08, 0.08, ax1)
 
     for pose in grasp.computed_end_effector_poses:
         ax1 = plot_reference_frames(pose[0:3, 0:3], np.reshape(pose[0:3, 3], [3]), 0.02, 0.02, ax1)

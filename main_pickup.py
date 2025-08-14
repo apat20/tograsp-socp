@@ -306,7 +306,7 @@ if __name__ == "__main__":
     ax1.add_collection3d(Poly3DCollection(grasp.faces, linewidths=1, edgecolors='b', alpha=.25))
     ax1.scatter(x_transformed_points, y_transformed_points, z_transformed_points, s = 0.2)
 
-     # Visualize the screw axis: 
+    # Visualize the screw axis: 
     ax1.scatter(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], marker = '*', s = 100, color = 'r')
     ax1.quiver(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], 0.25*grasp.unit_vector_base[0], 0.25*grasp.unit_vector_base[1], 0.25*grasp.unit_vector_base[2], color = "r", arrow_length_ratio = 0.25)
 
