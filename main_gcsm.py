@@ -242,11 +242,18 @@ if __name__ == "__main__":
     # Intermediate pose 1:
     # Rotation about X-axis:
     # theta = math.radians(30)
-    theta = 30
+    theta_X = 30
     R_theta_X = np.asarray([[1, 0, 0],
-                            [0, np.cos(theta), -np.sin(theta)],
-                            [0, np.sin(theta), np.cos(theta)]])
-    R_inter_1, p_inter_1, g_inter_1 = R_theta_X @ np.eye(3), np.asarray([0, 0.15, 0.4]), np.eye(4)
+                            [0, np.cos(theta_X), -np.sin(theta_X)],
+                            [0, np.sin(theta_X), np.cos(theta_X)]])
+    theta_Y = 10
+    R_theta_Y = np.asarray([[np.cos(theta_Y), 0, np.sin(theta_Y)],
+                            [0, 1, 0],
+                            [-np.sin(theta_Y), 0, np.cos(theta_Y)]])
+    
+    # R_inter_1, p_inter_1, g_inter_1 = R_theta_X @ np.eye(3), np.asarray([0, 0.15, 0.4]), np.eye(4)
+    R_inter_1, p_inter_1, g_inter_1 = R_theta_Y @ R_theta_X @ np.eye(3), np.asarray([0.2, 0.15, 0.4]), np.eye(4)
+
     g_inter_1[0:3, 0:3], g_inter_1[0:3, 3] = R_inter_1, p_inter_1
 
     # SCREW LINEAR INTERPOLATION TO COMPUTE THE TASK SPACE PATH:
