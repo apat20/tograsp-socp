@@ -1,13 +1,23 @@
-# Code for computing the task dependent grasp metric for tasks which don't
-# have contact with the environment and the objective is to apply a pure 
-# force about an axis. Example: Picking up an object off the ground
-# By: Aditya Patankar
+''' 
+Code for computing the task dependent grasp metric for tasks which don't
+have contact with the environment and the objective is to apply a pure 
+force about an axis. Example: Picking up an object off the ground
+
+By: Aditya Patankar 
+'''
 
 import cvxpy as cp
 import numpy as np
 
-# Function to compute the skew symmetric matrix of a vector:
+# HELPER FUNCTIONS:
 def get_skew_symmetric(p):
+    '''
+    Function to compute the skew symmetric matrix of a vector:
+
+    Args:
+
+    Output:
+    '''
     if p.shape == (3,1):
         p_hat = np.asarray([[0, float(-p[2]), float(p[1])],
                             [float(p[2]), 0,  float(-p[0])],
@@ -16,8 +26,15 @@ def get_skew_symmetric(p):
         print('Invalid Dimensions')
     return p_hat
 
-# Function to compute the Grasp Map:
+
 def get_grasp_map(R, p_hat, contact_model):
+    '''
+    Function to compute the Grasp Map
+    
+    Args:
+
+    Output:
+    '''
     # Soft-Finger with Elliptic Approximation:
     if contact_model == 'sf':
         I = np.zeros([3,5])
@@ -48,14 +65,17 @@ def get_grasp_map(R, p_hat, contact_model):
         adjoint[0:3, 3:6] = np.zeros([3,3])
         adjoint[3:6, 0:3] = np.matmul(p_hat,R)
         adjoint[3:6, 3:6] = R
-        '''Dimensionality mismatch. Need to review the original formula for point contact with friction'''
+        # Dimensionality mismatch. Need to review the original formula for point contact with friction
         G = np.matmul(adjoint, B_c)
     else:
         print('Invalid Contact Model')
     return G
 
-# Function to compute the Adjoint of a Matrix:
+
 def get_adjoint_wrench(g):
+    ''' 
+    Function to compute the Adjoint of a Matrix
+    '''
     R = g[0:3, 0:3]
     p = g[0:3, 3]
     p_hat = get_skew_symmetric(np.reshape(p, [3,1]))
@@ -67,8 +87,11 @@ def get_adjoint_wrench(g):
 
     return adjoint
 
-# Function to compute the Adjoint of a Matrix using CVX's matrix concatenation function bmat
+
 def get_adjoint_wrench_cvx(g):
+    ''' 
+    Function to compute the Adjoint of a Matrix using CVX's matrix concatenation function bmat 
+    '''
     R = g[0:3, 0:3]
     p = g[0:3, 3]
     p_hat = get_skew_symmetric(np.reshape(p, [3,1]))
@@ -76,6 +99,7 @@ def get_adjoint_wrench_cvx(g):
 
     return adjoint
 
+# Python class formulating the grasp metric as an SOCP and solving it:
 class two_finger_gfop(object):
 
     def __init__(self):
@@ -145,6 +169,10 @@ class two_finger_gfop(object):
 
 
     def compute_metric_force(self):
+        '''
+        Computes grasp metric where the desired constant screw motion is pure translation. 
+        The grasp metric is the maximum magnitude of force along the axis corresponding to the screw motion.
+        '''
         # Computing the skew symmetric matrices and the corresponding Grasp Map:
         self.p_OC_1_hat = get_skew_symmetric(self.p_OC_1)
         self.p_OC_2_hat = get_skew_symmetric(self.p_OC_2)
@@ -154,7 +182,7 @@ class two_finger_gfop(object):
         # Using CVXPY Atoms:
         G = cp.hstack([G1, G2])
 
-        '''Defining and solving the Grasping Force Optimization Problem as a SOCP: '''
+        # Defining and solving the Grasping Force Optimization Problem as a SOCP:
         fC = cp.Variable(shape = (12, 1))
         tau = cp.Variable(self.n)
 
@@ -188,6 +216,10 @@ class two_finger_gfop(object):
         return prob.value
     
     def compute_metric_moment(self):
+        '''
+        Computes grasp metric where the desired constant screw motion is pure rotation or a general constant screw motion. 
+        The grasp metric is the maximum magnitude of moment about the axis corresponding to the screw motion.
+        '''
         # Computing the skew symmetric matrices and the corresponding Grasp Map:
         self.p_OC_1_hat = get_skew_symmetric(self.p_OC_1)
         self.p_OC_2_hat = get_skew_symmetric(self.p_OC_2)
@@ -197,7 +229,7 @@ class two_finger_gfop(object):
         # Using CVXPY Atoms:
         G = cp.hstack([G1, G2])
 
-        '''Defining and solving the Grasping Force Optimization Problem as a SOCP: '''
+        #Defining and solving the Grasping Force Optimization Problem as a SOCP: '''
         fC = cp.Variable(shape = (12, 1))
         tau = cp.Variable(self.n)
 
