@@ -12,8 +12,7 @@ import func.quaternion_lib as ql
 from func.utils import plot_cube
 from func.utils import plot_reference_frames
 
-# Importing cvxpy to solve the GFOP:
-import cvxpy as cp
+import argparse, os
 
 # Functionalities for point cloud processing and computing the ideal grasping region:
 from point_cloud_module.process_point_cloud import point_cloud
@@ -211,16 +210,18 @@ def get_logs(grasp_object, dir, trial):
 
 if __name__ == "__main__":
 
-    # Read and process the point cloud:
-    filename = "nontextured.ply"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--filename", default="nontextured.ply")
+    parser.add_argument("--trial", default="1")
+    parser.add_argument("--log-dir", default="logs")
+    args = parser.parse_args()
 
-    # Filepath to save logs for visualization and debugging:
-    log_dir = 'logs/'
-    trial = '1'
+    out_dir = os.path.join(args.log_dir, f"pickup_trial_{args.trial}")
+    os.makedirs(out_dir, exist_ok=True)
 
     # Creating the cloud object and loading the necessary file:
     cloud = point_cloud()   
-    pcd = o3d.io.read_point_cloud(filename)
+    pcd = o3d.io.read_point_cloud(args.filename)
     cloud = build_cloud_object(cloud, pcd)
 
     # Computing the bounding boxes corresponding to the object point cloud: 
@@ -296,7 +297,7 @@ if __name__ == "__main__":
     z_transformed_points = np.reshape(cloud.transformed_points_object_frame[:, 2], [cloud.transformed_points_object_frame.shape[0],1])
 
     # Saving logs for visualization:
-    get_logs(grasp, log_dir, trial)
+    get_logs(grasp, args.log_dir, args.trial)
 
     '''PLOT 1:'''
     fig1 = plt.figure()
