@@ -1,0 +1,8 @@
+# Alternative to environment.yml for people who prefer venv + pip:
+#   python -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+numpy
+scipy
+cvxpy
+open3d
+matplotlib
