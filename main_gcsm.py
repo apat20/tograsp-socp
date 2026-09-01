@@ -235,6 +235,9 @@ if __name__ == "__main__":
     grasp.g_delta = 0.0624
     grasp.g_delta_inter = 0.0925
 
+    # Specifying the grasp metric threshold: 
+    grasp.grasp_metric_threshold = 0.7
+
     # Base/world reference frame:
     g_base = np.eye(4)
 
@@ -318,10 +321,6 @@ if __name__ == "__main__":
     ax1.add_collection3d(Poly3DCollection(grasp.faces, linewidths=1, edgecolors='b', alpha=.25))
     # ax1.scatter(x_transformed_points, y_transformed_points, z_transformed_points, s = 0.2)
 
-    # # Visualize the screw axis (base reference frame): 
-    # ax1.scatter(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], marker = '*', s = 100, color = 'r')
-    # ax1.quiver(grasp.point_base[0], grasp.point_base[1], grasp.point_base[2], 0.25*grasp.unit_vector_base[0], 0.25*grasp.unit_vector_base[1], 0.25*grasp.unit_vector_base[2], color = "r", arrow_length_ratio = 0.25)
-
     # Visualize the screw axis (original reference frame): 
     ax1.scatter(point_1[0], point_1[1], point_1[2], marker = '*', s = 100, color = 'r')
     ax1.quiver(point_1[0], point_1[1], point_1[2], 0.25*unit_vector_1[0], 0.25*unit_vector_1[1], 0.25*unit_vector_1[2], color = "r", arrow_length_ratio = 0.25)
@@ -341,5 +340,39 @@ if __name__ == "__main__":
     ax1.set_xlim(-1, 1)
     ax1.set_ylim(-1, 1)
     ax1.set_zlim(-1, 1)
+
+    '''PLOT 2:'''
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(projection='3d')
+    ax2.grid(False)
+
+    # # Plot the object bounding box and point cloud:
+    grasp.vertices = cloud.transformed_vertices_object_frame
+    grasp.plot_cube()
+    ax2.add_collection3d(Poly3DCollection(grasp.faces, linewidths=1, edgecolors='b', alpha=.25))
+    ax2.scatter(x_transformed_points, y_transformed_points, z_transformed_points, s = 0.2)
+
+    # Base configuration:
+    ax2 = plot_reference_frames(g_base[0:3, 0:3], np.reshape(g_base[0:3, 3], [3]), 0.08, 0.08, ax2)
+
+    for gc in grasp.grasp_centers:
+        ax2.scatter(gc[0], gc[1], gc[2], marker = '*', s = 100, color = 'r')
+
+    ax2.set_xlabel('X')
+    ax2.set_ylabel('Y')
+    ax2.set_zlabel('Z')
+    ax2.set_xlim(-1, 1)
+    ax2.set_ylim(-1, 1)
+    ax2.set_zlim(-1, 1)
+
+
+    '''PLOT: 3'''
+    fig3 = plt.figure()
+    ax2 = fig2.add_subplot(projection='3d')
+    ax2.grid(False)
+
+    # Plotting the intermediate poses: 
+
+    # 
 
     plt.show()

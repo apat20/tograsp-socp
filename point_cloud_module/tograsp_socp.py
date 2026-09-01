@@ -952,12 +952,11 @@ class tograsp():
 		self.ideal_grasping_region_bounding_box_center = np.asarray(self.ideal_grasping_region_bounding_box.get_center())
 
 		# Using the dimensions of the newer bounding box of the ideal grasping region:
-		 
+
+	'''Function to COMPUTE end effector poses based on the computed metric values.'''
+	# This function needs to be modified and updated: 
 	def get_end_effector_poses(self):
-		'''
-		Function to COMPUTE end effector poses based on the computed metric values
-		'''
-		# This function needs to be modified and updated:
+
 		# Saving the sampled end effector poses:
 		self.computed_end_effector_poses = []
 		self.computed_end_effector_poses_inter = []
@@ -974,61 +973,20 @@ class tograsp():
 		self.approach_dir_other_poses = []
 		self.approach_dir_other_inter_poses = []
 
-		xz_plane = False
-		yz_plane = False
-		if self.cloud_object.y_dim < self.gripper_width_tolerance:
-			print('Generating EE poses along XZ plane')
-			xz_plane = True
-		elif self.cloud_object.x_dim < self.gripper_width_tolerance:
-			print('Generating EE poses along YZ plane')
-			yz_plane = True
-		else:
-			raise RuntimeError('Neither X nor Y are within gripper tolerance.')
-
 		for i,v in enumerate(self.ideal_grasping_region_grid_centers):
 			
 			# Outer conditional statement to check whether the dimensions along which we are grasping are less than the gripper width tolerance:
-			if xz_plane:
-			# Approach Direction 2:
-				'''
-				[
-					min X, min Y, max Z
-					max X, min Y, max Z
-					max X, max Y, max Z
-					min X, max Y, max Z
-				]
-				plane_points_1 is the top surface of the object (XY plane)
-				'''
+			if self.cloud_object.y_dim < self.gripper_width_tolerance:
+				# Approach Direction 2:
 				self.plane_points_1 = np.asarray([self.cloud_object.transformed_vertices_object_frame[3], self.cloud_object.transformed_vertices_object_frame[6], self.cloud_object.transformed_vertices_object_frame[4], self.cloud_object.transformed_vertices_object_frame[5]])
 				# Approach direction 3:
-				'''
-				[
-					min X, min Y, max Z
-					min X, max Y, max Z
-					min X, max Y, min Z
-					min X, min Y, min Z
-				]
-				plane_points_2 is the negative X side of the object (YZ plane)
-				'''
 				self.plane_points_2 = np.asarray([self.cloud_object.transformed_vertices_object_frame[3], self.cloud_object.transformed_vertices_object_frame[5], self.cloud_object.transformed_vertices_object_frame[2], self.cloud_object.transformed_vertices_object_frame[0]])
 				# Approach direction 5:
-				'''
-				[
-					max X, min Y, max Z
-					max X, min Y, min Z
-					max X, max Y, min Z
-					max X, max Y, max Z
-				]
-				plane_points_3 is the positive X side of the object (YZ plane)
-				'''
 				self.plane_points_3 = np.asarray([self.cloud_object.transformed_vertices_object_frame[6], self.cloud_object.transformed_vertices_object_frame[1], self.cloud_object.transformed_vertices_object_frame[7], self.cloud_object.transformed_vertices_object_frame[4]])
 				
 				# Center points of each of the planes corresponding to the three approach directions:
-				# [0, 0, max Z]
 				self.center_point_plane_1 = np.asarray([self.cloud_object.p_base[0], self.cloud_object.p_base[1], [self.plane_points_1[0, 2]]])
-				# [min X, 0, 0]
 				self.center_point_plane_2 = np.asarray([[self.plane_points_2[0, 0]], self.cloud_object.p_base[1], self.cloud_object.p_base[2]])
-				# [max X, 0 ,0]
 				self.center_point_plane_3 = np.asarray([[self.plane_points_3[0, 0]], self.cloud_object.p_base[1], self.cloud_object.p_base[2]])
 
 				# Orientation of the contact reference frames: 
@@ -1057,13 +1015,6 @@ class tograsp():
 
 				self.position_C1 = np.asarray([self.ideal_grasping_region_grid_centers[i][0], self.cloud_object.transformed_vertices_object_frame[0,1], self.ideal_grasping_region_grid_centers[i][1]])
 				self.position_C2 = np.asarray([self.ideal_grasping_region_grid_centers[i][0], self.cloud_object.transformed_vertices_object_frame[2,1], self.ideal_grasping_region_grid_centers[i][1]])
-				
-				# self.position_C1 = np.asarray(self.ideal_grasping_region_grid_centers_3d[i, 0], self.ideal_grasping_region_grid_centers_3d[i, 1], self.ideal_grasping_region_grid_centers_3d[i, 2])
-				# self.position_C1 = np.asarray(self.ideal_grasping_region_grid_centers_3d[i, 0], self.cloud_object.transformed_vertices_object_frame[2,1], self.ideal_grasping_region_grid_centers_3d[i, 2])
-
-				self.position_C1 = self.ideal_grasping_region_grid_centers_3d_C1[i, :]
-				self.position_C2 = self.ideal_grasping_region_grid_centers_3d_C2[i, :]
-
 				self.grasp_center = np.add(self.position_C1, np.dot((self.cloud_object.y_dim)/2, self.z_C1)) 
 
 				self.distance_1, self.unit_u1 = self.get_distance(self.plane_points_1, self.center_point_plane_1, self.grasp_center)
@@ -1072,7 +1023,6 @@ class tograsp():
 
 				# Checking the second approach direction:
 				if self.distance_1 < self.gripper_height_tolerance:
-					print('Generating EE poses for second approach direction')
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = -1*self.unit_u1
 					self.y_EE = self.z_C1
@@ -1097,8 +1047,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u1))
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u1))    
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u1))
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u1))    
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1139,7 +1089,6 @@ class tograsp():
 					
 				# Checking the third approach direction:
 				if self.distance_2 < self.gripper_height_tolerance: 
-					print('Generating EE poses for third approach direction')
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = self.unit_u2
 					self.x_EE = np.asarray([0,0,1])
@@ -1164,8 +1113,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u2))
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u2)) 
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u2))
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u2)) 
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1206,7 +1155,6 @@ class tograsp():
 
 				# Checking the fifth approach direction:
 				if self.distance_3 < self.gripper_height_tolerance: 
-					print('Generating EE poses for fifth approach direction')
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = self.unit_u3
 					self.y_EE = self.z_C2
@@ -1230,8 +1178,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u3))
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u3)) 
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u3))
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u3)) 
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1271,7 +1219,7 @@ class tograsp():
 					self.approach_dir_other_inter_poses.append(self.gripper_pose_inter)
 
 			# Outer conditional statement to check whether the dimensions along which we are grasping are less than the gripper width tolerance:
-			elif yz_plane:
+			if self.cloud_object.x_dim < self.gripper_width_tolerance:
 				# Approach Direction 2:
 				self.plane_points_1 = np.asarray([self.cloud_object.transformed_vertices_object_frame[3], self.cloud_object.transformed_vertices_object_frame[6], self.cloud_object.transformed_vertices_object_frame[4], self.cloud_object.transformed_vertices_object_frame[5]])
 				# Approach Direction 1:
@@ -1317,7 +1265,6 @@ class tograsp():
 
 				# Checking the second approach direction:
 				if self.distance_1 < self.gripper_height_tolerance:
-					print('Generating EE poses for second approach direction')
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = -1*self.unit_u1
 					self.y_EE = self.z_C2
@@ -1342,8 +1289,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u1)) 
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u1))  
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u1)) 
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u1))  
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1384,7 +1331,6 @@ class tograsp():
 					
 				# Checking the first approach direction:
 				if self.distance_2 < self.gripper_height_tolerance: 
-					print('Generating EE poses for first approach direction')
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = self.unit_u2
 					self.y_EE = self.z_C2
@@ -1408,8 +1354,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u2))
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u2)) 
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u2))
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u2)) 
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1449,8 +1395,7 @@ class tograsp():
 					self.approach_dir_other_inter_poses.append(self.gripper_pose_inter)
 
 				# Checking the fourth approach direction:
-				if self.distance_3 < self.gripper_height_tolerance:
-					print('Generating EE poses for the fourth approach direction')
+				if self.distance_3 < self.gripper_height_tolerance: 
 					# End Effector Orientation Based on the Franka Panda Convention: 
 					'''self.z_EE = self.unit_u3
 					self.y_EE = self.z_C2
@@ -1474,8 +1419,8 @@ class tograsp():
 					self.R_EE_inter = self.R_EE
 
 					# End Effector Position: 
-					self.p_EE = np.add(self.grasp_center, np.dot(self.g_delta, self.unit_u3))
-					self.p_EE_inter = np.add(self.grasp_center, np.dot(self.g_delta_inter, self.unit_u3)) 
+					self.p_EE = np.add(self.grasp_center, np.dot(-0.1434, self.unit_u3))
+					self.p_EE_inter = np.add(self.grasp_center, np.dot(-0.1800, self.unit_u3)) 
 
 					# End Effector pose as an element of SE(3) (4x4 transformation matrix):
 					self.gripper_pose = np.zeros([4,4])
@@ -1513,7 +1458,7 @@ class tograsp():
 					# Additional attribute for experimental purposes:
 					self.approach_dir_other_poses.append(self.gripper_pose)
 					self.approach_dir_other_inter_poses.append(self.gripper_pose_inter)
-		
+
 		# Transforming the sampled end-effector poses back to the base reference frame.
 		self.computed_end_effector_poses_base = []
 		self.computed_end_effector_poses_inter_base = []
