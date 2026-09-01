@@ -2,7 +2,7 @@
 
 Python implementation for computing a task-dependent grasp metric as a second-order cone program (SOCP).
 
-A task is formalized as a **unit screw**: the constant screw motion to be imparted to the object *after* grasping. Given a (partial) point cloud of an object and a task screw, this code computes the metric for antipodal contacts sampled on the object's bounding box, extracts the resulting grasping region, and computes candidate 6-DOF end-effector poses.
+A task is formalized in terms of the **constant screw motion** to be imparted to the object *after* grasping. Given a (partial) point cloud of an object and a task screw, this code computes the metric for antipodal contacts sampled on the object's bounding box, extracts the resulting grasping region, and computes candidate 6-DOF end-effector poses.
 
 Please note that this repository is under active development.
 
@@ -73,7 +73,7 @@ The physical parameters currently live in the `__main__` block and in `build_and
 | Parameter | Where | Default | Meaning |
 | --- | --- | --- | --- |
 | `grasp.gripper_width_tolerance` | `__main__` | 0.08 m | Max gripper opening; decides which pair of bounding box faces the contacts are sampled on |
-| `grasp.gripper_height_tolerance` | `__main__` | 0.041 m | Finger length, used to reject approach directions |
+| `grasp.gripper_height_tolerance` | `__main__` | 0.041 m | Used to reject approach directions |
 | `grasp.grasp_metric_threshold` | `__main__` | 0.7 | Fraction of the max metric above which a grid cell joins the grasping region |
 | `gfop_object.F` | `build_and_solve_gfop` | 30 N | Max normal force per finger |
 | `gfop_object.F_external` | `build_and_solve_gfop` | 10 N along -z | External wrench on the object (its weight) |
