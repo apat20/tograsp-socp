@@ -27,10 +27,11 @@ def build_cloud_object(cloud_object, pcd):
     Function builds an object of the point_cloud class
 
     Args:
-
+        cloud_object - Object of class point_cloud
+        pcd - Open3D point cloud object created 
 
     Returns:
-    
+        cloud_object
     '''
     cloud_object.processed_cloud = pcd
     cloud_object.points = np.asarray(cloud_object.processed_cloud.points)
@@ -48,8 +49,11 @@ def get_transformed_cloud(points, g):
     Function to transform a point cloud given a rotation matrix and a position vector
 
     Args:
+        points:
+        g:
 
     Returns:
+        transformed_points:
 
     '''
     transformed_points = np.asarray([np.reshape(np.add(np.matmul(g[0:3, 0:3], point), g[0:3, 3]), [1,3]) for point in points])
@@ -60,9 +64,13 @@ def transform_screw_axis(unit_vector, point, g):
     Function to transform the unit vector and screw axis and express it with respect to the desired pose/configuratio 'g'
 
     Args:
+        unit_vector:
+        point:
+        g:
 
     Returns:
-
+        unit_vector_transformed:
+        point_transformed:
     '''
     u = np.asarray([unit_vector[0], unit_vector[1], unit_vector[2], 0])
     p = np.asarray([point[0], point[1], point[2], 1])
@@ -75,9 +83,14 @@ def build_and_solve_gfop(gfop_object, grasp_object):
     Function to build and solve an instance of the Grasping Force Optimization(gfop) class
 
     Args:
+        gfop_object:
+        grasp_object:
+        friction_params:
 
     Returns:
-
+        computed_metric_values: A Python list containing the metric values corresponding to 
+                                each pair of antipodal contacts generated on the faces of the
+                                bounding box
     '''
     # Data for formalizing the optimization problem for computing the task dependent grasp metric:
     # Initial Object Configuration
@@ -159,6 +172,9 @@ def get_logs(grasp_object, dir, trial):
     Function to save all the necessary log files
 
     Args:
+        grasp_object: The object containing data to log.
+        dir (str): Base directory path (e.g., "logs/").
+        trial (int/str): The trial identifier.
 
     Returns: None
     '''

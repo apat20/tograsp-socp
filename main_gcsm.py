@@ -4,7 +4,6 @@ import open3d as o3d
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
-import math
 
 # Importing quaternion functionalities
 import func.quaternion_lib as ql
