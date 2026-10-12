@@ -1,8 +1,25 @@
-# Alternative to environment.yml for people who prefer venv + pip:
-#   python -m venv .venv && source .venv/bin/activate
+# Dependencies for tograsp-socp, for people who prefer venv + pip over conda.
+#
+# REQUIRES PYTHON 3.10 OR NEWER.
+#
+#   python3.10 -m venv .venv
+#   source .venv/bin/activate      # Windows: .venv\Scripts\activate
 #   pip install -r requirements.txt
+#
+# The Python floor is enforced by the scipy pin: scipy >= 1.14 publishes no
+# wheels for Python < 3.10, so pip fails with
+#   ERROR: No matching distribution found for scipy>=1.14
+# rather than installing something that breaks at run time.
+#
+# NOTE ON SCIPY: func/quaternion_lib.py uses the `scalar_first` keyword of
+# Rotation.as_quat() and Rotation.from_quat(), added in SciPy 1.14.0. On older
+# SciPy these calls raise
+#   TypeError: as_quat() got an unexpected keyword argument 'scalar_first'
+# since SciPy < 1.14 returns them scalar-last (x, y, z, w) instead of
+# scalar-first (w, x, y, z).
+
 numpy
-scipy
+scipy>=1.14
 cvxpy
-open3d
+open3d==0.19.0
 matplotlib
