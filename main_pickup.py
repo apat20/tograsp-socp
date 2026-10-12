@@ -294,11 +294,28 @@ if __name__ == "__main__":
     
     # Build and solve gfop_1:
     computed_metric_values_1 = build_and_solve_gfop(gfop, grasp)
-    grasp.test_datapoints = grasp.x_data
-    grasp.computed = np.reshape(np.asarray(computed_metric_values_1), [len(computed_metric_values_1), 1])
 
-    # Normalizing the values between 0 and 1:
-    grasp.computed = (grasp.computed - np.min(grasp.computed))/(np.max(grasp.computed - np.min(grasp.computed)))
+    # Filtering out the computed metric values: 
+    valid_mask = ~np.isnan(computed_metric_values_1)
+
+    grasp.test_datapoints = grasp.x_data
+    grasp.computed = np.reshape(np.zeros_like(computed_metric_values_1), [len(computed_metric_values_1), 1])
+
+    # Safely normalizing between 0 and 1:
+    if np.any(valid_mask):
+        valid_data = grasp.computed[valid_mask]
+        v_min, v_max = np.min(valid_data), np.max(valid_data)
+    
+    if v_max != v_min:
+        # Assign normalized data back into the original slots
+        grasp.computed[valid_mask] = (valid_data - v_min) / (v_max - v_min)
+    else:
+        grasp.computed[valid_mask] = 0.0 # Handle edge case where all valid numbers are identical
+
+
+    ## Normalizing the values between 0 and 1:
+    # grasp.computed = (grasp.computed - np.min(grasp.computed))/(np.max(grasp.computed - np.min(grasp.computed)))
+    
     grasp.metric_values = grasp.computed
 
     # Computing the ideal grasping region:

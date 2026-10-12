@@ -55,18 +55,21 @@ def get_grasp_map(R, p_hat, contact_model):
         adjoint[3:6, 3:6] = R
 
         G = np.matmul(adjoint, B_c)
-    # Point Contact with Friction:
-    elif contact_model == 'pf':
-        B_c = np.zeros([5,3])
-        B_c[0:3, 0:3] = np.eye(3)
 
-        adjoint = np.zeros([6,6])
-        adjoint[0:3, 0:3] = R
-        adjoint[0:3, 3:6] = np.zeros([3,3])
-        adjoint[3:6, 0:3] = np.matmul(p_hat,R)
-        adjoint[3:6, 3:6] = R
-        # Dimensionality mismatch. Need to review the original formula for point contact with friction
-        G = np.matmul(adjoint, B_c)
+    # NOTE: Requires changes
+    # # Point Contact with Friction:
+    # elif contact_model == 'pf':
+    #     B_c = np.zeros([5,3])
+    #     B_c[0:3, 0:3] = np.eye(3)
+
+    #     adjoint = np.zeros([6,6])
+    #     adjoint[0:3, 0:3] = R
+    #     adjoint[0:3, 3:6] = np.zeros([3,3])
+    #     adjoint[3:6, 0:3] = np.matmul(p_hat,R)
+    #     adjoint[3:6, 3:6] = R
+    #     # Dimensionality mismatch. Need to review the original formula for point contact with friction
+    #     G = np.matmul(adjoint, B_c)
+
     else:
         print('Invalid Contact Model')
     return G
@@ -165,6 +168,7 @@ class two_finger_gfop(object):
         self.point = None
 
         # Data structure to store the computed task-dependent grasp metric values:
+        self.metric = None
         self.metric_values = None
 
 
@@ -213,7 +217,12 @@ class two_finger_gfop(object):
                                     )
 
         prob.solve()
-        return prob.value
+
+        if prob.status in ['infeasible', 'infeasible_inaccurate']:
+            self.metric = np.nan
+        else:
+            self.metric = prob.value
+        return self.metric
     
     def compute_metric_moment(self):
         '''
@@ -259,5 +268,8 @@ class two_finger_gfop(object):
                                     fC[2] <= self.F, fC[8] <= self.F]
                                     )
 
-        prob.solve()
-        return prob.value
+        if prob.status in ['infeasible', 'infeasible_inaccurate']:
+            self.metric = np.nan
+        else:
+            self.metric = prob.value
+        return self.metric
