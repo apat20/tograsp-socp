@@ -1,4 +1,7 @@
 
+import argparse, os
+import sys
+
 import open3d as o3d
 
 import matplotlib.pyplot as plt
@@ -11,8 +14,6 @@ import func.quaternion_lib as ql
 # Import helper functions for visualisation
 from func.utils import plot_cube
 from func.utils import plot_reference_frames
-
-import argparse, os
 
 # Functionalities for point cloud processing and computing the ideal grasping region:
 from point_cloud_module.process_point_cloud import point_cloud
@@ -119,8 +120,6 @@ def build_and_solve_gfop(gfop_object, grasp_object):
         gfop_object.R_OC_2 = np.asarray([[0,0,-1],[0,-1,0],[-1,0,0]])
         # Contact normal at contact location C2:
         gfop_object.normal_C_2 = gfop_object.R_OC_2[0:3, 2]
-    elif grasp_object.cloud_object.x_dim < grasp_object.gripper_width_tolerance and grasp_object.y_dim < grasp_object.gripper_width_tolerance:
-        print('Both dimensions with gripper width tolerance. Generating contacts along XZ plane')
 
     # Maximum force in Newtons that the fingers can apply in the normal direction:
     gfop_object.F = 30
@@ -236,7 +235,12 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     # Creating the cloud object and loading the necessary file:
-    cloud = point_cloud()   
+    cloud = point_cloud()  
+
+    # Check if the file exists
+    if not os.path.isfile(args.filename):
+        sys.exit(f"ERROR: The file {args.filename} does not exist. Exiting script")
+
     pcd = o3d.io.read_point_cloud(args.filename)
     cloud = build_cloud_object(cloud, pcd)
 
@@ -295,27 +299,33 @@ if __name__ == "__main__":
     # Build and solve gfop_1:
     computed_metric_values_1 = build_and_solve_gfop(gfop, grasp)
 
-    # Filtering out the computed metric values: 
-    valid_mask = ~np.isnan(computed_metric_values_1)
+    # Raw metric values. NaN where the SOCP did not solve to optimality.
+    raw_metric_values = np.reshape(np.asarray(computed_metric_values_1, dtype=float),
+                                   [len(computed_metric_values_1), 1])
+    valid_mask = ~np.isnan(raw_metric_values)
+
+    n_invalid = int((~valid_mask).sum())
+    if n_invalid:
+        print(f"WARNING: {n_invalid} of {raw_metric_values.size} SOCP instances did not "
+              f"solve to optimality; they are scored 0 and excluded from normalization.")
 
     grasp.test_datapoints = grasp.x_data
-    grasp.computed = np.reshape(np.zeros_like(computed_metric_values_1), [len(computed_metric_values_1), 1])
 
-    # Safely normalizing between 0 and 1:
-    if np.any(valid_mask):
-        valid_data = grasp.computed[valid_mask]
-        v_min, v_max = np.min(valid_data), np.max(valid_data)
-    
-    if v_max != v_min:
-        # Assign normalized data back into the original slots
+    grasp.computed = np.zeros_like(raw_metric_values)
+
+    if not np.any(valid_mask):
+        raise SystemExit("No SOCP instance solved to optimality. Check the contact "
+                         "parameters, the external wrench and the friction coefficients.")
+
+    valid_data = raw_metric_values[valid_mask]
+    v_min, v_max = np.min(valid_data), np.max(valid_data)
+
+    if v_max > v_min:
         grasp.computed[valid_mask] = (valid_data - v_min) / (v_max - v_min)
     else:
-        grasp.computed[valid_mask] = 0.0 # Handle edge case where all valid numbers are identical
+        # Every feasible grasp scored identically; they are all equally good.
+        grasp.computed[valid_mask] = 1.0
 
-
-    ## Normalizing the values between 0 and 1:
-    # grasp.computed = (grasp.computed - np.min(grasp.computed))/(np.max(grasp.computed - np.min(grasp.computed)))
-    
     grasp.metric_values = grasp.computed
 
     # Computing the ideal grasping region:

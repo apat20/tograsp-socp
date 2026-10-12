@@ -973,6 +973,11 @@ class tograsp():
 		self.approach_dir_other_poses = []
 		self.approach_dir_other_inter_poses = []
 
+		# Seeding random number generator for contact frame computation.
+		# NOTE: In principle, this does not matter as any orientation of the orthogonal axes (X and Y)
+		#       works. The contact normal (Z axis) and its orientation is what is important.
+		rng = np.random.default_rng(seed=42)
+
 		for i,v in enumerate(self.ideal_grasping_region_grid_centers):
 			
 			# Outer conditional statement to check whether the dimensions along which we are grasping are less than the gripper width tolerance:
@@ -993,7 +998,7 @@ class tograsp():
 				# Getting an orthogonal reference frame where the z axis is along the normal: 
 				# Frame C1:
 				self.z_C1 = np.asarray([0, 1, 0])
-				self.x_C1 = np.random.randn(3)
+				self.x_C1 = rng.random(3)
 				self.x_C1 -= self.x_C1.dot(self.z_C1)*self.z_C1
 				self.x_C1 /= la.norm(self.x_C1)
 				self.y_C1 = np.cross(self.z_C1, self.x_C1)
@@ -1004,7 +1009,7 @@ class tograsp():
 
 				# Frame C2:
 				self.z_C2 = np.asarray([0, -1, 0])
-				self.x_C2 = np.random.randn(3)
+				self.x_C2 = rng.random(3)
 				self.x_C2 -= self.x_C2.dot(self.z_C2)*self.z_C2
 				self.x_C2 /= la.norm(self.x_C2)
 				self.y_C2 = np.cross(self.z_C2, self.x_C2)
@@ -1235,7 +1240,7 @@ class tograsp():
 				# Getting an orthogonal reference frame where the z axis is along the normal: 
 				# Frame C1:
 				self.z_C1 = np.asarray([-1, 0, 0])
-				self.x_C1 = np.random.randn(3)
+				self.x_C1 = rng.random(3)
 				self.x_C1 -= self.x_C1.dot(self.z_C1)*self.z_C1
 				self.x_C1 /= la.norm(self.x_C1)
 				self.y_C1 = np.cross(self.z_C1, self.x_C1)
@@ -1246,7 +1251,7 @@ class tograsp():
 
 				# Frame C2:
 				self.z_C2 = np.asarray([1, 0, 0])
-				self.x_C2 = np.random.randn(3)
+				self.x_C2 = rng.random(3)
 				self.x_C2 -= self.x_C2.dot(self.z_C2)*self.z_C2
 				self.x_C2 /= la.norm(self.x_C2)
 				self.y_C2 = np.cross(self.z_C2, self.x_C2)

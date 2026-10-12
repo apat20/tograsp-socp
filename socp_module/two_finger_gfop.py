@@ -218,7 +218,10 @@ class two_finger_gfop(object):
 
         prob.solve()
 
-        if prob.status in ['infeasible', 'infeasible_inaccurate']:
+        # Only an optimal solve yields a usable metric. Every other status
+        # (infeasible, unbounded, solver_error) returns NaN so it can be
+        # filtered out before normalization.
+        if prob.status not in ('optimal', 'optimal_inaccurate'):
             self.metric = np.nan
         else:
             self.metric = prob.value
@@ -268,7 +271,12 @@ class two_finger_gfop(object):
                                     fC[2] <= self.F, fC[8] <= self.F]
                                     )
 
-        if prob.status in ['infeasible', 'infeasible_inaccurate']:
+        prob.solve()
+
+        # Only an optimal solve yields a usable metric. Every other status
+        # (infeasible, unbounded, solver_error, ...) returns NaN so it can be
+        # filtered out before normalization.
+        if prob.status not in ('optimal', 'optimal_inaccurate'):
             self.metric = np.nan
         else:
             self.metric = prob.value
