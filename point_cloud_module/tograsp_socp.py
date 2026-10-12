@@ -47,12 +47,6 @@ class tograsp():
 
 		# Attributes associated with Metric Prediction for the sampled contacts
 		self.x_data: np.ndarray = None
-		self.y_data = None
-
-		self.input_size = 12
-		self.hidden_size_1 = 8
-		self.hidden_size_2 = 3
-		self.batch_size = 2
 
 		self.test_datapoints: np.ndarray = None
 		self.computed: np.ndarray = None 
@@ -411,8 +405,10 @@ class tograsp():
 			self.generate_contacts_yz()
 			# self.generate_contacts_yz_plucker_non_plucker()
 			# self.generate_contacts_yz_additional_features()
-		elif self.cloud_object.x_dim < self.gripper_width_tolerance and self.cloud_object.y_dim < self.gripper_width_tolerance:
-			print('Both dimensions with gripper width tolerance. Generating contacts along XZ plane')
+		
+		# elif self.cloud_object.x_dim < self.gripper_width_tolerance and self.cloud_object.y_dim < self.gripper_width_tolerance:
+		# 	print('Both dimensions with gripper width tolerance. Generating contacts along XZ plane')
+		
 		else:
 			print(f'Invalid Data: Gripper width tolerance issue. The tolerance is set to: {self.gripper_width_tolerance}')
 			print(f'Bounding box X_dim: {self.cloud_object.x_dim}')
@@ -893,13 +889,15 @@ class tograsp():
 			self.generate_grid_yz()
 			self.check_occupancy_yz()
 			print('Occupancy check completed, proceed towards sampling poses ... ')
-		elif self.cloud_object.x_dim < self.gripper_width_tolerance and self.cloud_object.y_dim < self.gripper_width_tolerance:
-			print('Both dimensions with gripper width tolerance. Generating contacts along XZ plane')
-			self.project_points_xz()
-			print('(XZ) Points projected on the surface now generating grid ...')
-			self.generate_grid_xz()
-			self.check_occupancy_xz()
-			print('Occupancy check completed, proceed towards sampling poses ... ')
+		
+		# elif self.cloud_object.x_dim < self.gripper_width_tolerance and self.cloud_object.y_dim < self.gripper_width_tolerance:
+		# 	print('Both dimensions with gripper width tolerance. Generating contacts along XZ plane')
+		# 	self.project_points_xz()
+		# 	print('(XZ) Points projected on the surface now generating grid ...')
+		# 	self.generate_grid_xz()
+		# 	self.check_occupancy_xz()
+		# 	print('Occupancy check completed, proceed towards sampling poses ... ')
+		
 		else:
 			print('Invalid Data=')
 
@@ -998,7 +996,7 @@ class tograsp():
 				# Getting an orthogonal reference frame where the z axis is along the normal: 
 				# Frame C1:
 				self.z_C1 = np.asarray([0, 1, 0])
-				self.x_C1 = rng.random(3)
+				self.x_C1 = rng.standard_normal(3)
 				self.x_C1 -= self.x_C1.dot(self.z_C1)*self.z_C1
 				self.x_C1 /= la.norm(self.x_C1)
 				self.y_C1 = np.cross(self.z_C1, self.x_C1)
@@ -1009,7 +1007,7 @@ class tograsp():
 
 				# Frame C2:
 				self.z_C2 = np.asarray([0, -1, 0])
-				self.x_C2 = rng.random(3)
+				self.x_C2 = rng.standard_normal(3)
 				self.x_C2 -= self.x_C2.dot(self.z_C2)*self.z_C2
 				self.x_C2 /= la.norm(self.x_C2)
 				self.y_C2 = np.cross(self.z_C2, self.x_C2)
@@ -1240,7 +1238,7 @@ class tograsp():
 				# Getting an orthogonal reference frame where the z axis is along the normal: 
 				# Frame C1:
 				self.z_C1 = np.asarray([-1, 0, 0])
-				self.x_C1 = rng.random(3)
+				self.x_C1 = rng.standard_normal(3)
 				self.x_C1 -= self.x_C1.dot(self.z_C1)*self.z_C1
 				self.x_C1 /= la.norm(self.x_C1)
 				self.y_C1 = np.cross(self.z_C1, self.x_C1)
@@ -1251,7 +1249,7 @@ class tograsp():
 
 				# Frame C2:
 				self.z_C2 = np.asarray([1, 0, 0])
-				self.x_C2 = rng.random(3)
+				self.x_C2 = rng.standard_normal(3)
 				self.x_C2 -= self.x_C2.dot(self.z_C2)*self.z_C2
 				self.x_C2 /= la.norm(self.x_C2)
 				self.y_C2 = np.cross(self.z_C2, self.x_C2)

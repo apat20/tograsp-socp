@@ -256,7 +256,7 @@ if __name__ == "__main__":
     R_theta_X = np.asarray([[1, 0, 0],
                             [0, np.cos(theta_X), -np.sin(theta_X)],
                             [0, np.sin(theta_X), np.cos(theta_X)]])
-    theta_Y = 10
+    theta_Y = math.radians(10)
     R_theta_Y = np.asarray([[np.cos(theta_Y), 0, np.sin(theta_Y)],
                             [0, 1, 0],
                             [-np.sin(theta_Y), 0, np.cos(theta_Y)]])
