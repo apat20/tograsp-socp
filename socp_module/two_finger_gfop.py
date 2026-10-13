@@ -103,7 +103,7 @@ def get_adjoint_wrench_cvx(g):
     return adjoint
 
 # Python class formulating the grasp metric as an SOCP and solving it:
-class two_finger_gfop(object):
+class TwoFingerGFOP(object):
 
     def __init__(self):
 
@@ -160,8 +160,8 @@ class two_finger_gfop(object):
         self.mu = None
 
         # Variables Specifying the dimensions of the optimization parameters in the SOCP:
-        self.m = None
-        self.n = None
+        self._M = 6
+        self._N = 1
 
         # Screw Axis:
         self.unit_vector = None
@@ -188,7 +188,7 @@ class two_finger_gfop(object):
 
         # Defining and solving the Grasping Force Optimization Problem as a SOCP:
         fC = cp.Variable(shape = (12, 1))
-        tau = cp.Variable(self.n)
+        tau = cp.Variable(self._N)
 
         # Extracting the first two components of the object-robot contact forces
         fc1 = fC[0:2]
@@ -243,7 +243,7 @@ class two_finger_gfop(object):
 
         #Defining and solving the Grasping Force Optimization Problem as a SOCP: '''
         fC = cp.Variable(shape = (12, 1))
-        tau = cp.Variable(self.n)
+        tau = cp.Variable(self._N)
 
         # Extracting the first two components of the object-robot contact forces
         fc1 = fC[0:2]

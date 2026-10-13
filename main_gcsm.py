@@ -16,12 +16,15 @@ import func.quaternion_lib as ql
 from func.utils import plot_cube
 from func.utils import plot_reference_frames
 
+# Importing config params
+import config
+
 # Functionalities for point cloud processing and computing the ideal grasping region:
-from point_cloud_module.process_point_cloud import point_cloud
-from point_cloud_module.tograsp_socp import tograsp
+from point_cloud_module.process_point_cloud import PointCloud
+from point_cloud_module.tograsp_socp import TOGrasp
 
 # Second Order Cone Program for computing the task-depedent grasp metric:
-from socp_module.two_finger_gfop import two_finger_gfop
+from socp_module.two_finger_gfop import TwoFingerGFOP
 
 
 def build_cloud_object(cloud_object, pcd):
@@ -90,7 +93,7 @@ def build_and_solve_gfop(gfop_object, grasp_object):
     gfop_object.R_O_final = np.zeros([3,3])
     gfop_object.p_O_final = np.zeros([3,1])
 
-    if grasp_object.cloud_object.y_dim < grasp_object.gripper_width_tolerance:
+    if grasp_object.cloud_object.y_dim < grasp_object.GRIPPER_WIDTH_TOLERANCE:
         print('Generating contacts along XZ plane')
         # Object-Robot Contact location position and orientation information with respect to the Object reference frame:
         # Contact location C1:
@@ -99,7 +102,7 @@ def build_and_solve_gfop(gfop_object, grasp_object):
         # Contact location C2:
         gfop_object.R_OC_2 = np.asarray([[-1,0,0],[0,0,-1],[0,-1,0]])
         gfop_object.normal_C_2 = gfop_object.R_OC_2[0:3, 2]
-    elif grasp_object.cloud_object.x_dim < grasp_object.gripper_width_tolerance:
+    elif grasp_object.cloud_object.x_dim < grasp_object.GRIPPER_WIDTH_TOLERANCE:
         print('Generating contacts along YZ plane')
         # Object-Robot Contact location position and orientation information with respect to the Object reference frame:
         gfop_object.R_OC_1 = np.asarray([[0,0,1],[0,1,0],[-1,0,0]])
@@ -110,37 +113,33 @@ def build_and_solve_gfop(gfop_object, grasp_object):
         gfop_object.normal_C_2 = gfop_object.R_OC_2[0:3, 2]
 
     # Maximum force in Newtons that the fingers can apply in the normal direction:
-    gfop_object.F = 30
+    gfop_object.F = config.F
 
     # Specifying the contact model to compute the Grasp Map. Here the contact model is the soft finger contact model
-    gfop_object.contact_model = 'sf'
+    gfop_object.contact_model = config.CONTACT_MODEL
 
     # External force acting on the object. For this application we assume that the external force is the self weight of 
     # the object.
     # NOTE: Dimension of the array if 1x6 while initializing. It should be 6x1 when solving the optimization problem. 
-    gfop_object.F_external = np.reshape(np.asarray([0,0,-10,0,0,0]), [6,1])
-
-    # Variables specifying the dimensions of the optimization variables in the SOCP:
-    gfop_object.m = 6
-    gfop_object.n = 1
+    gfop_object.F_external = config.F_EXTERNAL
 
     # Friction parameters for soft finger contact at the object-robot contact locations:
     # Contact location 1:
-    gfop_object.e11 = 1
-    gfop_object.e12 = 1
-    gfop_object.e1r = 0.2
-    gfop_object.mu1 = 0.4
+    gfop_object.e11 = config.E11
+    gfop_object.e12 = config.E12
+    gfop_object.e1r = config.E1R
+    gfop_object.mu1 = config.MU1
 
     # Contact location 2:
-    gfop_object.e21 = 1
-    gfop_object.e22 = 1
-    gfop_object.e2r = 0.2
-    gfop_object.mu2 = 0.4
+    gfop_object.e21 = config.E21
+    gfop_object.e22 = config.E22
+    gfop_object.e2r = config.E2R
+    gfop_object.mu2 = config.MU2
 
-    gfop_object.sigma  = 0.6
+    gfop_object.sigma  = config.SIGMA
 
     # Friction coefficient for point contact with friction model assumed at the object-environment contact:
-    gfop_object.mu = 0.6
+    gfop_object.mu = config.MU
     
     computed_metric_values = []
 
@@ -220,7 +219,7 @@ if __name__ == "__main__":
     os.makedirs(out_dir, exist_ok=True)
 
     # Creating the cloud object and loading the necessary file:
-    cloud = point_cloud() 
+    cloud = PointCloud() 
 
     # Check if the file exists
     if not os.path.isfile(args.filename):
@@ -233,15 +232,15 @@ if __name__ == "__main__":
     cloud.compute_bounding_box()
 
     # Initialize an object of tograsp:
-    grasp = tograsp(cloud)
+    grasp = TOGrasp(cloud)
 
     # Specifying gripper tolerances:
-    grasp.gripper_width_tolerance = 0.08
+    grasp.GRIPPER_WIDTH_TOLERANCE = 0.08
     # Original tips:
-    grasp.gripper_height_tolerance = 0.041
+    grasp.GRIPPER_HEIGHT_TOLERANCE = 0.041
     # Attributes to compute the location of the reference frame at the flange for the grasp pose and pre-grasp pose
-    grasp.g_delta = 0.0624
-    grasp.g_delta_inter = 0.0925
+    grasp.G_DELTA = 0.0624
+    grasp.G_DELTA_INTER = 0.0925
 
     # Specifying the grasp metric threshold: 
     grasp.grasp_metric_threshold = 0.7
@@ -286,7 +285,7 @@ if __name__ == "__main__":
 
     # COMPUTING THE TASK-DEPENDENT GRASP METRIC AS A SOCP:
     # Initializing object of the GFOP class:
-    gfop = two_finger_gfop()
+    gfop = TwoFingerGFOP()
 
     # Generating antipodal contact locations along two parallel faces of the bounding box:
     grasp.generate_contacts()

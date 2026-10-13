@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 from collections import Counter
 
-class point_cloud(object):
+class PointCloud(object):
 	def __init__(self): 
       	# Attributes associated with Point Cloud Preprocessing: 
 		self.cloud = None
