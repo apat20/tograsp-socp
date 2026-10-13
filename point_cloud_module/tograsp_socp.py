@@ -122,7 +122,7 @@ class tograsp():
 		self.ideal_grasping_region_bounding_box_center = None
 
 		# Scalar value representing maximum allowable gripper width in metres 
-		self.gripper_width_tolerance: float = None
+		self.GRIPPER_WIDTH_TOLERANCE: float = None
 
 		# Scalar value to avoid the gripper from colliding with the object while grasping
 		self.gripper_height_tolerance: float = None

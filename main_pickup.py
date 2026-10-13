@@ -251,7 +251,7 @@ if __name__ == "__main__":
     grasp = tograsp(cloud)
 
     # Specifying gripper tolerances:
-    grasp.gripper_width_tolerance = 0.08
+    grasp.GRIPPER_WIDTH_TOLERANCE = 0.08
     # Original tips:
     grasp.gripper_height_tolerance = 0.041
     # Attributes to compute the location of the reference frame at the flange for the grasp pose and pre-grasp pose
