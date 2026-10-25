@@ -1,0 +1,13 @@
+# Keep the build context small and the image free of local state.
+.git
+.gitignore
+__pycache__/
+*.pyc
+logs/
+.venv/
+venv/
+.DS_Store
+
+# MATLAB visualization is not used inside the container.
+matlab_helper_funcs/
+visualize_results.m

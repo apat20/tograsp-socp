@@ -94,6 +94,10 @@ func/                     Quaternion / dual quaternion / ScLERP utilities, plott
 matlab_helper_funcs/      MATLAB plotting helpers
 visualize_results.m       MATLAB visualization of a logged trial
 nontextured.ply           Example object point cloud
+config.py                 SOCP and gripper parameters
+Dockerfile                Container image: ROS 2 plus this code
+docker-compose.yml        Container settings, including ROS 2 communication between containers
+docker/                   Fast DDS profile for forcing UDP between containers
 ```
 
 ## Citation
@@ -136,6 +140,39 @@ Related papers:
 ```
 
 A journal version of this paper is under preparation.
+
+## Running with Docker
+
+A Docker setup based on ROS 2 Humble is included. It is meant for running this
+code on an NVIDIA Jetson Orin alongside other ROS 2 containers (for example, a
+perception node), but it works on any machine with Docker. So far it has been
+tested on an Apple Silicon Mac, which has the same CPU architecture as the
+Jetson (linux/arm64). It has not been tested on a Jetson yet.
+
+Build the image (the first build takes several minutes):
+
+```bash
+docker compose build
+```
+
+Run the examples. Output is written to `logs/` on your machine:
+
+```bash
+docker compose run --rm tograsp
+docker compose run --rm tograsp python3 main_gcsm.py --trial 1 --log-dir /app/logs
+```
+
+Check that two containers can talk to each other over ROS 2. `pong` should
+print `data: ping` once a second:
+
+```bash
+docker compose --profile plumbing up ping pong
+```
+
+The containers use host networking and host IPC so that ROS 2 can communicate
+between them; the comments in `docker-compose.yml` explain each setting. To use
+a different ROS 2 distribution, change `ROS_DISTRO` in `docker-compose.yml`
+(for example to `jazzy`) and rebuild.
 
 ## License
 

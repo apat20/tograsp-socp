@@ -1,0 +1,66 @@
+# Inter-container setup for tograsp-socp on the Orin (also works on a laptop).
+#
+#   docker compose build
+#   docker compose run --rm tograsp              # bundled example, writes ./logs
+#   docker compose --profile plumbing up ping pong   # check that two containers can talk over ROS 2
+#
+# Every ROS 2 participant that talks to this container (the perception
+# container, the orchestrator, and the laptop running the motion controller)
+# must use the same ROS_DOMAIN_ID and RMW_IMPLEMENTATION. Every container on
+# the Orin should also run with host networking and host IPC.
+
+x-ros2: &ros2
+  # DDS discovery uses multicast, which is unreliable on Docker bridge networks.
+  # Host networking also lets the Orin's containers reach the laptop on the LAN.
+  network_mode: host
+  # Fast DDS uses shared memory between processes on the same machine. Without a
+  # shared IPC namespace, topics show up in `ros2 topic list` but no data arrives.
+  ipc: host
+  # Often paired with ipc: host for Fast DDS shared memory. Harmless on a
+  # dedicated robot computer.
+  pid: host
+  environment:
+    # Non-zero, so this system doesn't see (or get seen by) other ROS 2 systems
+    # running on the same network on the default domain 0.
+    ROS_DOMAIN_ID: "42"
+    # Must match the perception container. Fast DDS is the default for humble and jazzy.
+    RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+    # If topics are visible but no messages arrive, uncomment to force UDP and
+    # bypass shared memory entirely:
+    # FASTRTPS_DEFAULT_PROFILES_FILE: /app/docker/fastdds_udp_only.xml
+
+services:
+  tograsp:
+    <<: *ros2
+    build:
+      context: .
+      args:
+        ROS_DISTRO: humble   # set to whatever the perception container uses
+    image: tograsp-socp:latest
+    volumes:
+      - ./logs:/app/logs
+    # To run on your own cloud, mount it and point --filename at it, e.g.
+    #   docker compose run --rm -v "$PWD/my_cloud.ply:/app/data/my_cloud.ply:ro" tograsp \
+    #       python3 main_pickup.py --filename /app/data/my_cloud.ply --trial 2 --log-dir /app/logs
+    command: python3 main_pickup.py --filename nontextured.ply --trial 1 --log-dir /app/logs
+
+  # Plumbing check: two containers from the same image exchanging a ROS 2 topic
+  # under exactly the settings above. If `pong` prints the messages, the
+  # container-to-container setup works.
+  ping:
+    <<: *ros2
+    image: tograsp-socp:latest
+    profiles: [plumbing]
+    command: ["ros2", "topic", "pub", "--rate", "1", "/tograsp/ping", "std_msgs/msg/String", "{data: ping}"]
+
+  pong:
+    <<: *ros2
+    image: tograsp-socp:latest
+    profiles: [plumbing]
+    command: ros2 topic echo /tograsp/ping std_msgs/msg/String
+
+  # Placeholder for the perception container, once you have it.
+  # perception:
+  #   <<: *ros2
+  #   image: <perception image name>
+  #   runtime: nvidia        # the perception container does need the GPU
