@@ -66,7 +66,7 @@ Results are written to `<log-dir>/pickup_trial_<trial>/` or `<log-dir>/gcsm_tria
 
 Outputs are ignored by git. `visualize_results.m` reads a trial folder for the MATLAB-side plots.
 
-## What the parameters mean
+## Parameters
 
 The physical parameters currently live in the `__main__` block and in `build_and_solve_gfop` of each script. The ones most likely to need changing for a different object or gripper:
 
@@ -82,7 +82,7 @@ The physical parameters currently live in the `__main__` block and in `build_and
 
 The end-effector offsets in `get_end_effector_poses` are specific to a Franka Emika Panda with the stock fingers.
 
-## Repository layout
+## Repository Structure
 
 ```
 main_pickup.py            Entry point: pure translation task screw
