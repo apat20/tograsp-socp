@@ -8,25 +8,9 @@ By: Aditya Patankar
 
 import cvxpy as cp
 import numpy as np
+import func.quaternion_lib as ql
 
 # HELPER FUNCTIONS:
-def get_skew_symmetric(p):
-    '''
-    Function to compute the skew symmetric matrix of a vector:
-
-    Args:
-
-    Output:
-    '''
-    if p.shape == (3,1):
-        p_hat = np.asarray([[0, float(-p[2]), float(p[1])],
-                            [float(p[2]), 0,  float(-p[0])],
-                            [float(-p[1]), float(p[0]), 0]])
-    else:
-        print('Invalid Dimensions')
-    return p_hat
-
-
 def get_grasp_map(R, p_hat, contact_model):
     '''
     Function to compute the Grasp Map
@@ -81,7 +65,7 @@ def get_adjoint_wrench(g):
     '''
     R = g[0:3, 0:3]
     p = g[0:3, 3]
-    p_hat = get_skew_symmetric(np.reshape(p, [3,1]))
+    p_hat = ql.skew_symmetric(np.reshape(p, [3,1]))
     adjoint = np.zeros([6,6])
     adjoint[0:3, 0:3] = R
     adjoint[0:3, 3:6] = np.zeros([3,3])
@@ -97,7 +81,7 @@ def get_adjoint_wrench_cvx(g):
     '''
     R = g[0:3, 0:3]
     p = g[0:3, 3]
-    p_hat = get_skew_symmetric(np.reshape(p, [3,1]))
+    p_hat = ql.skew_symmetric(np.reshape(p, [3,1]))
     adjoint = cp.bmat([[R, np.zeros([3,3])], [cp.matmul(p_hat,R), R]])
 
     return adjoint
@@ -178,8 +162,8 @@ class TwoFingerGFOP(object):
         The grasp metric is the maximum magnitude of force along the axis corresponding to the screw motion.
         '''
         # Computing the skew symmetric matrices and the corresponding Grasp Map:
-        self.p_OC_1_hat = get_skew_symmetric(self.p_OC_1)
-        self.p_OC_2_hat = get_skew_symmetric(self.p_OC_2)
+        self.p_OC_1_hat = ql.skew_symmetric(self.p_OC_1)
+        self.p_OC_2_hat = ql.skew_symmetric(self.p_OC_2)
         G1 = get_grasp_map(self.R_OC_1, self.p_OC_1_hat, self.contact_model)
         G2 = get_grasp_map(self.R_OC_2, self.p_OC_2_hat, self.contact_model)
 
@@ -233,8 +217,8 @@ class TwoFingerGFOP(object):
         The grasp metric is the maximum magnitude of moment about the axis corresponding to the screw motion.
         '''
         # Computing the skew symmetric matrices and the corresponding Grasp Map:
-        self.p_OC_1_hat = get_skew_symmetric(self.p_OC_1)
-        self.p_OC_2_hat = get_skew_symmetric(self.p_OC_2)
+        self.p_OC_1_hat = ql.skew_symmetric(self.p_OC_1)
+        self.p_OC_2_hat = ql.skew_symmetric(self.p_OC_2)
         G1 = get_grasp_map(self.R_OC_1, self.p_OC_1_hat, self.contact_model)
         G2 = get_grasp_map(self.R_OC_2, self.p_OC_2_hat, self.contact_model)
 
@@ -270,7 +254,6 @@ class TwoFingerGFOP(object):
                                     fC[4] == 0, fC[10] == 0,
                                     fC[2] <= self.F, fC[8] <= self.F]
                                     )
-
         prob.solve()
 
         # Only an optimal solve yields a usable metric. Every other status

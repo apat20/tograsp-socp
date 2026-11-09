@@ -17,9 +17,9 @@ def skew_symmetric(p):
         A 3x3 matrix
     """
     if p.shape == (3,1):
-        p_hat = np.asarray([[0, float(-p[2]), float(p[1])],
-                            [float(p[2]), 0,  float(-p[0])],
-                            [float(-p[1]), float(p[0]), 0]])
+        p_hat = np.asarray([[0, float(-p[2, 0]), float(p[1, 0])],
+                [float(p[2, 0]), 0,  float(-p[0, 0])],
+                [float(-p[1, 0]), float(p[0, 0]), 0]])
     else:
         print('Invalid input dimensions!')
     return p_hat
