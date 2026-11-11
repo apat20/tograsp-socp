@@ -49,6 +49,13 @@ services:
     image: tograsp-socp:latest
     volumes:
       - ./logs:/app/logs
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      # Repeated on purpose: a service's own environment replaces the shared one instead of adding to it
+      ROS_DOMAIN_ID: "42"
+      RMW_IMPLEMENTATION: rmw_fastrtps_cpp
+      DISPLAY: ${DISPLAY}
+      MPLBACKEND: TkAgg
     command: sleep infinity
 
   # Plumbing check: two containers from the same image exchanging a ROS 2 topic

@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
-"""Plan a pickup grasp for one object, using the perception pipeline's point cloud.
+"""
+Grasp synthesis to pickup a single one object, using a point cloud obtained from via a perception system.
 
     python3 pickup.py cup --base-frame <robot_frame from perception's system.json>
 
-Like the perception pipeline's `detect "cup"`: it asks perception for the object, runs
+This code is similar in structure to the perception pipeline's 'detect "cup"'.
+It asks perception for the object, runs
 run_pickup() on that object's cloud (your bounding box, grasp metric and end-effector poses),
 publishes the poses and prints a summary. Perception's own pose and size for the object are
-not used. Quote multi-word names: python3 pickup.py "'tennis ball'"
+not used. 
 
-Published in the cloud's frame (the robot base frame), stamped with the capture time:
+NOTE: multi-word names: python3 pickup.py "'tennis ball'"
+
+Published in the robot base frame, stamped with the capture time:
     /tograsp/grasp_poses, /tograsp/pregrasp_poses   geometry_msgs/PoseArray (flange poses)
     /tograsp/object_box/pose                        geometry_msgs/PoseStamped
     /tograsp/object_box/size                        geometry_msgs/Vector3Stamped (along the box axes, m)
     /tograsp/object_box/marker                      visualization_msgs/Marker (for RViz)
     /tograsp/object_cloud                           sensor_msgs/PointCloud2 (the cloud used, for RViz)
 The same poses are saved to <log-dir>/pickup_trial_<request_id>/poses.json.
+
+NOTE: Perception's own pose and size for the object, computed using ros_seg_pipeline/perception/geometry.py are not used 
 
 ROS 2 keeps the published poses available to subscribers that connect later only while this
 script runs, so after publishing it waits for Ctrl+C. Use --hold SECONDS to exit on its own.
@@ -92,6 +98,75 @@ def pose_values(pose):
     return [round(v, 5) for v in (p.x, p.y, p.z, q.x, q.y, q.z, q.w)]
 
 
+def plot_results(grasp, cloud, out_dir):
+    """
+    Saves PNGs to out_dir and shows the windows (depends if matplotlib has an interactive backend)
+
+    Args:
+
+    Returns:
+        The saved file paths.
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+    from func.utils import plot_reference_frames
+
+    def scene(points, vertices, title):
+        grasp.vertices = vertices
+        grasp.plot_cube()  # fills grasp.faces from grasp.vertices
+        fig = plt.figure()
+        ax = fig.add_subplot(projection="3d")
+        ax.grid(False)
+        ax.add_collection3d(Poly3DCollection(grasp.faces, linewidths=1, edgecolors="b", alpha=.25))
+        ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=0.2)
+        plot_reference_frames(np.eye(3), np.zeros(3), 0.08, 0.08, ax)
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+        ax.set_zlabel("Z")
+        ax.set_title(title)
+        return fig, ax
+
+    saved = []
+
+    def save(fig, name):
+        path = os.path.join(out_dir, name)
+        fig.savefig(path, dpi=150)
+        saved.append(path)
+
+    # Figures 1 and 2: as in main_pickup.py, in the object (bounding box) frame.
+    pts_obj, verts_obj = cloud.transformed_points_object_frame, cloud.transformed_vertices_object_frame
+    fig, ax = scene(pts_obj, verts_obj, "Grasp poses, object frame")
+    for pose in grasp.computed_end_effector_poses:
+        plot_reference_frames(pose[0:3, 0:3], np.reshape(pose[0:3, 3], [3]), 0.02, 0.02, ax)
+    for set_lim in (ax.set_xlim, ax.set_ylim, ax.set_zlim):
+        set_lim(-1, 1)
+    save(fig, "grasp_poses_object_frame.png")
+
+    fig, ax = scene(pts_obj, verts_obj, "Grasp centres, object frame")
+    for gc in grasp.grasp_centers:
+        ax.scatter(gc[0], gc[1], gc[2], marker="*", s=100, color="r")
+    for set_lim in (ax.set_xlim, ax.set_ylim, ax.set_zlim):
+        set_lim(-1, 1)
+    save(fig, "grasp_centres_object_frame.png")
+
+    # Figure 3: what the robot receives. Cloud, box and poses in the robot base frame.
+    g = np.asarray(cloud.g_bounding_box)
+    verts_base = verts_obj @ g[:3, :3].T + g[:3, 3]
+    fig, ax = scene(np.asarray(cloud.points), verts_base, "Grasp poses, robot base frame")
+    for pose in grasp.computed_end_effector_poses_base:
+        plot_reference_frames(pose[0:3, 0:3], np.reshape(pose[0:3, 3], [3]), 0.02, 0.02, ax)
+    shown = np.vstack([cloud.points] + [p[0:3, 3] for p in grasp.computed_end_effector_poses_base])
+    centre, half = shown.mean(axis=0), np.ptp(shown, axis=0).max() / 2 + 0.05
+    for set_lim, c in zip((ax.set_xlim, ax.set_ylim, ax.set_zlim), centre):
+        set_lim(c - half, c + half)
+    save(fig, "grasp_poses_base_frame.png")
+
+    if plt.get_backend().lower() != "agg":
+        plt.show()  # returns when the windows are closed
+    plt.close("all")
+    return saved
+
+
 def select_object(result, query):
     """
     Highest-scoring object that has a pose, preferring objects whose label matches the query.
@@ -107,7 +182,7 @@ def select_object(result, query):
     pool = matching or with_pose
     return max(pool, key=lambda o: o.score) if pool else None
 
-
+# ROS 2 Pickup Node
 class Pickup(Node):
     def __init__(self, base_frame, log_dir, timeout):
         super().__init__("tograsp_pickup")
@@ -136,13 +211,25 @@ class Pickup(Node):
         self.clouds[msg.request_id] = msg
 
     def run(self, query):
+        """
+        Runner function to query the perception system for an object, retrieve its point cloud and compute a set of grasps 
+        based on the desired motion. In this particular example, the desired motion is pure translation.
+
+        Args:
+
+
+        Return:
+
+
+        """
         start = time.monotonic()
 
         # 1. Ask perception for the object 
         # NOTE: This is essentially what `detect "cup"` does.
-        
         if not self.detect.wait_for_server(timeout_sec=10.0):
             raise RuntimeError("perception's /perception/detect action is not available; is it running?")
+        
+        # NOTE: goal_future, goal, result_future are standard ROS 2 action-client objects available via rclpy
         goal_future = self.detect.send_goal_async(
             DetectObjects.Goal(query=query),
             feedback_callback=lambda msg: print(f"perception: {msg.feedback.stage}", flush=True))
@@ -198,6 +285,7 @@ class Pickup(Node):
         grasps = [matrix_to_pose(T) for T in grasp.computed_end_effector_poses_base]
         pregrasps = [matrix_to_pose(T) for T in grasp.computed_end_effector_poses_inter_base]
 
+        # Utilizing standard geometric message types for the messages. 
         box_size = Vector3Stamped(header=header)
         box_size.vector.x, box_size.vector.y, box_size.vector.z = size
         marker = Marker(header=header, ns="tograsp", id=0, type=Marker.CUBE,
@@ -210,6 +298,11 @@ class Pickup(Node):
         self.box_marker_pub.publish(marker)
         self.pregrasp_pub.publish(PoseArray(header=header, poses=pregrasps))
         self.grasp_pub.publish(PoseArray(header=header, poses=grasps))
+
+        # Plotting the results. For the time being the results are being saved to a directory
+        # NOTE: Matplotlib will show the interactive window (possibly?)
+        for path in plot_results(grasp, cloud, trial_dir):
+            print(f"Figure saved: {path}", flush=True)
 
         # Dictionary data structure to store the output and results
         summary = {
@@ -234,16 +327,27 @@ class Pickup(Node):
 
 def main():
     parser = argparse.ArgumentParser(description="Pickup grasp planning on a perception point cloud")
+
+    # Similar to how the object input is currently given to the perception system
     parser.add_argument("query", help="object to pick, e.g. cup or \"'tennis ball'\"")
+
+    # This is not required    
     parser.add_argument("--base-frame", default="",
                         help="frame the cloud must be in: robot_frame in perception's system.json")
+    
+    # Directory to log the results
     parser.add_argument("--log-dir", default="logs", help="where run_pickup writes its logs")
     parser.add_argument("--timeout", type=float, default=90.0, help="seconds to wait for perception")
     parser.add_argument("--hold", type=float, default=None,
                         help="exit this many seconds after publishing (default: wait for Ctrl+C)")
+    
+    # To visualize the results
+    parser.add_argument("--plot", action="store_true", help="draw, save and show the matplotlib figures")
     args = parser.parse_args()
 
     rclpy.init()
+
+    # Initialize the pickup node
     node = Pickup(args.base_frame, args.log_dir, args.timeout)
     code = 0
     try:
