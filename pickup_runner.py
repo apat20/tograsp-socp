@@ -4,16 +4,10 @@ import sys
 
 import open3d as o3d
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import numpy as np
 
 # Importing quaternion functionalities
 import func.quaternion_lib as ql
-
-# Import helper functions for visualisation
-from func.utils import plot_cube
-from func.utils import plot_reference_frames
 
 # Importing config params
 import config
@@ -256,8 +250,8 @@ def run_pickup(point_cloud, trial, log_dir):
 
     # SCREW LINEAR INTERPOLATION TO COMPUTE THE TASK SPACE PATH:
     # Computing the intermediate configurations using screw linear interpolation for the first constant screw motion:
-    [R_array_1, p_array_1, C_array_1, G_array_1, screw_params_1] = ql.sclerp(g_base[0:3, 0:3], g_base[0:3, 3], 
-                                                          R_inter_1, p_inter_1)
+    *_, screw_params_1 = ql.sclerp(g_base[0:3, 0:3], g_base[0:3, 3], 
+                                        R_inter_1, p_inter_1)
     
     # Extracting the screw parameters:
     # NOTE: The screw parameters are always computed with respect to the initial configuration given as input to ScLERP.
@@ -323,29 +317,3 @@ def run_pickup(point_cloud, trial, log_dir):
     get_logs(grasp, log_dir, trial)
 
     return grasp, cloud 
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--filename", default="nontextured.ply")
-    parser.add_argument("--trial", default="1")
-    parser.add_argument("--log-dir", default="logs")
-    args = parser.parse_args()
-
-    out_dir = os.path.join(args.log_dir, f"pickup_trial_{args.trial}")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # Check if the file exists
-    if not os.path.isfile(args.filename):
-        sys.exit(f"ERROR: The file {args.filename} does not exist. Exiting script")
- 
-    # Reading the point cloud from a file
-    pcd = o3d.io.read_point_cloud(args.filename)
-
-    # Computing grasping region and corresponding poses for picking the object up (pure translation)
-    grasp_object, cloud_object = run_pickup(pcd, args.trial, args.log_dir)
-
-    
-
-    

@@ -43,6 +43,13 @@ services:
     #   docker compose run --rm -v "$PWD/my_cloud.ply:/app/data/my_cloud.ply:ro" tograsp \
     #       python3 main_pickup.py --filename /app/data/my_cloud.ply --trial 2 --log-dir /app/logs
     command: python3 main_pickup.py --filename nontextured.ply --trial 1 --log-dir /app/logs
+    
+  grasping:
+    <<: *ros2
+    image: tograsp-socp:latest
+    volumes:
+      - ./logs:/app/logs
+    command: sleep infinity
 
   # Plumbing check: two containers from the same image exchanging a ROS 2 topic
   # under exactly the settings above. If `pong` prints the messages, the

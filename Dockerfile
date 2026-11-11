@@ -11,7 +11,7 @@
 #   docker buildx build --platform linux/arm64 -t tograsp-socp:arm64 --load .
 #
 # Match the perception container's ROS 2 distro (humble = Ubuntu 22.04 / Python 3.10,
-# jazzy = Ubuntu 24.04 / Python 3.12; both are in this repo's supported range):
+# jazzy = Ubuntu 24.04 / Python 3.12):
 #   docker build --build-arg ROS_DISTRO=jazzy -t tograsp-socp .
 
 ARG ROS_DISTRO=humble
@@ -47,6 +47,11 @@ COPY requirements.txt .
 # numpy 1.x. Upgrading the image's numpy to 2.x risks breaking compiled ROS
 # Python modules. Your code runs unchanged on numpy 1.26.
 RUN pip3 install "numpy<2" -r requirements.txt
+
+# Message definitions shared with the Orin perception stack (identical copy of its ros_pkgs/seg_interfaces)
+COPY ros_pkgs/seg_interfaces /opt/seg_ws/src/seg_interfaces
+RUN . /opt/ros/$ROS_DISTRO/setup.sh && cd /opt/seg_ws && colcon build && \
+    sed -i '/^exec "\$@"/i source /opt/seg_ws/install/setup.bash --' /ros_entrypoint.sh
 
 COPY . .
 
