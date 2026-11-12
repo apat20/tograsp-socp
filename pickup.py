@@ -36,6 +36,11 @@ import numpy as np
 import open3d as o3d
 from scipy.spatial.transform import Rotation
 
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from func.utils import plot_reference_frames
+
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
@@ -107,9 +112,6 @@ def plot_results(grasp, cloud, out_dir):
     Returns:
         The saved file paths.
     """
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d.art3d import Poly3DCollection
-    from func.utils import plot_reference_frames
 
     def scene(points, vertices, title):
         grasp.vertices = vertices
@@ -166,6 +168,19 @@ def plot_results(grasp, cloud, out_dir):
     plt.close("all")
     return saved
 
+def next_trial_number(log_dir):
+    """
+    Trial = highest numbered pickup_trial_<n> folder in log_dir + , or 1 if there is none.
+
+    Args:
+
+    Returns:
+
+    """
+    names = os.listdir(log_dir) if os.path.isdir(log_dir) else []
+    used = [int(n.rsplit("_", 1)[1]) for n in names
+            if n.startswith("pickup_trial_") and n.rsplit("_", 1)[1].isdigit()]
+    return max(used, default=0) + 1
 
 def select_object(result, query):
     """
@@ -184,10 +199,13 @@ def select_object(result, query):
 
 # ROS 2 Pickup Node
 class Pickup(Node):
-    def __init__(self, base_frame, log_dir, timeout):
+    def __init__(self, base_frame, log_dir, timeout, trial = None):
         super().__init__("tograsp_pickup")
 
-        self.base_frame, self.log_dir, self.timeout = base_frame, log_dir, timeout
+        self.base_frame = base_frame
+        self.log_dir = log_dir
+        self.timeout = timeout
+        self.trial = trial
         
         # Same QoS as perception's outputs: the latest message stays available to late subscribers.
         latched = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
@@ -269,7 +287,10 @@ class Pickup(Node):
         # 3. Bounding box, grasp metric and end-effector poses, exactly as in main_pickup.
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(points)
-        trial = result.request_id
+
+        # Logging the data based on the trial number
+        trial = self.trial or next_trial_number(self.log_dir)
+        # trial = result.request_id
         trial_dir = os.path.join(self.log_dir, f"pickup_trial_{trial}")
         os.makedirs(trial_dir, exist_ok=True)  # get_logs writes here and does not create it
         try:
@@ -306,7 +327,9 @@ class Pickup(Node):
 
         # Dictionary data structure to store the output and results
         summary = {
-            "request_id": trial,
+            # "request_id": trial,
+            "request_id": result.request_id,
+            "trial": trial,
             "query": query,
             "object": {"id": obj.id, "label": obj.label, "score": round(obj.score, 3),
                        "points": len(points)},
@@ -337,6 +360,7 @@ def main():
     
     # Directory to log the results
     parser.add_argument("--log-dir", default="logs", help="where run_pickup writes its logs")
+    parser.add_argument("--trial", default=None, help="name for the log folder pickup_trial_<trial> (default: next free number)")
     parser.add_argument("--timeout", type=float, default=90.0, help="seconds to wait for perception")
     parser.add_argument("--hold", type=float, default=None,
                         help="exit this many seconds after publishing (default: wait for Ctrl+C)")
@@ -348,7 +372,8 @@ def main():
     rclpy.init()
 
     # Initialize the pickup node
-    node = Pickup(args.base_frame, args.log_dir, args.timeout)
+    # node = Pickup(args.base_frame, args.log_dir, args.timeout)
+    node = Pickup(args.base_frame, args.log_dir, args.timeout, trial=args.trial)
     code = 0
     try:
         s = node.run(args.query)

@@ -25,7 +25,7 @@ def build_cloud_object(cloud_object, pcd):
     Function builds an object of the point_cloud class
 
     Args:
-        cloud_object - Object of class point_cloud
+        cloud_object - Object of class point_cloud 
         pcd - Open3D point cloud object created 
 
     Returns:
