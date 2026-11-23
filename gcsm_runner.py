@@ -153,7 +153,7 @@ def build_and_solve_gfop(gfop_object, grasp_object):
         gfop_object.p_OC_1 = np.reshape(grasp_object.sampled_c1[i], [3,1])
         gfop_object.p_OC_2 = np.reshape(grasp_object.sampled_c2[i], [3,1])
         # metric = gfop.computeMetric()
-        metric = gfop_object.compute_metric_force()
+        metric = gfop_object.compute_metric_moment()
         computed_metric_values.append(metric)
     return computed_metric_values
 

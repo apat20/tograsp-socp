@@ -60,7 +60,7 @@ if __name__ == "__main__":
     parser.add_argument("--log-dir", default="logs")
     args = parser.parse_args()
 
-    out_dir = os.path.join(args.log_dir, f"pickup_trial_{args.trial}")
+    out_dir = os.path.join(args.log_dir, f"gcsm_trial_{args.trial}")
     os.makedirs(out_dir, exist_ok=True)
 
     # Check if the file exists
