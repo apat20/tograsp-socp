@@ -29,6 +29,8 @@ class TOGrasp():
 		self.moment = None
 		# Pitch corresponding to the screw motion
 		self.pitch: np.ndarray = None
+		# Magnitude of the screw motion
+		self.magnitude = None
 
 		# Screw axis in the world/robot's base reference frame
 		self.unit_vector_base: np.ndarray = None
