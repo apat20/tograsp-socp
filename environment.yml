@@ -1,25 +1,13 @@
-# Conda environment for tograsp-socp.
-#
-#   conda env create -f environment.yml
-#   conda activate tograsp_socp
-#
-# NOTE ON SCIPY: func/quaternion_lib.py uses the `scalar_first` keyword of
-# Rotation.as_quat() and Rotation.from_quat(), which was added in SciPy 1.14.0.
-# On older SciPy these calls raise
-#   TypeError: as_quat() got an unexpected keyword argument 'scalar_first'
-# since SciPy < 1.14 returns them scalar-last (x, y, z, w) instead of
-# scalar-first (w, x, y, z).
-
+# Conda environment for tograsp-socp, Python 3.13.
 name: tograsp_socp
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
-  - python=3.10
+  - python=3.13
   - numpy
   - scipy>=1.14
+  - cvxpy
+  - open3d=0.20.0
+  - matplotlib
   - pip
-  - pip:
-      - cvxpy
-      - open3d==0.19.0; sys_platform == "darwin"
-      - open3d==0.20.0; sys_platform != "darwin"
-      - matplotlib
