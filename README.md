@@ -4,23 +4,17 @@ Python implementation for computing a task-dependent grasp metric as a second-or
 
 A task is formalized in terms of the **constant screw motion** to be imparted to the object *after* grasping. Given a (partial) point cloud of an object and a task screw, this code computes the metric for antipodal contacts sampled on the object's bounding box, extracts the resulting grasping region, and computes candidate 6-DOF end-effector poses.
 
+This branch has the standalone code. To run it on a robot with ROS 2 and Docker (for example on an NVIDIA Jetson Orin, next to a perception container), see the [`ros2-docker`](https://github.com/apat20/tograsp-socp/tree/ros2-docker) branch.
+
 Please note that this repository is under active development.
 
 ## Installation
 
-Requires Python 3.10. With conda:
+With conda (Python 3.13, all packages from conda-forge):
 
 ```bash
 conda env create -f environment.yml
 conda activate tograsp_socp
-```
-
-Or with a plain virtual environment:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
 ```
 
 The dependencies are `numpy`, `scipy`, `cvxpy` (with its default solver), `open3d`, and `matplotlib`.
@@ -41,7 +35,7 @@ python main_pickup.py --filename nontextured.ply --trial 1
 python main_gcsm.py   --filename nontextured.ply --trial 1
 ```
 
-Each run takes roughly 10 seconds on the bundled point cloud and opens two matplotlib windows: the object bounding box with the computed end-effector frames, and the same box with the grasp centers marked. Add `--no-plot` on a headless machine.
+Each run takes roughly 10 seconds on the bundled point cloud and opens two matplotlib windows: the object bounding box with the computed end-effector frames, and the same box with the grasp centers marked. On a machine without a display, start the command with `MPLBACKEND=Agg` to skip the windows.
 
 ### Arguments
 
@@ -50,7 +44,6 @@ Each run takes roughly 10 seconds on the bundled point cloud and opens two matpl
 | `--filename` | `nontextured.ply` | Path to the object point cloud (`.ply`) |
 | `--trial` | `1` | Label for this run; determines the output folder name |
 | `--log-dir` | `logs` | Parent directory for the per-trial output folders |
-| `--no-plot` | off | Skip the matplotlib windows |
 
 ### Output
 
@@ -68,25 +61,27 @@ Outputs are ignored by git. `visualize_results.m` reads a trial folder for the M
 
 ## Parameters
 
-The physical parameters currently live in the `__main__` block and in `build_and_solve_gfop` of each script. The ones most likely to need changing for a different object or gripper:
+The physical parameters are in `config.py`. The ones most likely to need changing for a different object or gripper:
 
-| Parameter | Where | Default | Meaning |
-| --- | --- | --- | --- |
-| `grasp.gripper_width_tolerance` | `__main__` | 0.08 m | Max gripper opening; decides which pair of bounding box faces the contacts are sampled on |
-| `grasp.gripper_height_tolerance` | `__main__` | 0.041 m | Used to reject approach directions |
-| `grasp.grasp_metric_threshold` | `__main__` | 0.7 | Fraction of the max metric above which a grid cell joins the grasping region |
-| `gfop_object.F` | `build_and_solve_gfop` | 30 N | Max normal force per finger |
-| `gfop_object.F_external` | `build_and_solve_gfop` | 10 N along -z | External wrench on the object (its weight) |
-| `gfop_object.mu1`, `mu2` | `build_and_solve_gfop` | 0.4 | Friction coefficients at the object-robot contacts |
-| `gfop_object.mu` | `build_and_solve_gfop` | 0.6 | Friction coefficient at the object-environment contact |
+| Parameter | Default | Meaning |
+| --- | --- | --- |
+| `GRIPPER_WIDTH_TOLERANCE` | 0.08 m | Max gripper opening; decides which pair of bounding box faces the contacts are sampled on |
+| `GRIPPER_HEIGHT_TOLERANCE` | 0.041 m | Used to reject approach directions |
+| `G_DELTA`, `G_DELTA_INTER` | 0.1434 m, 0.18 m | Distance from the grasp center back to the flange, for the grasp and pre-grasp poses |
+| `F` | 30 N | Max normal force per finger |
+| `F_EXTERNAL` | 10 N along -z | External wrench on the object (its weight) |
+| `MU1`, `MU2` | 0.4 | Friction coefficients at the object-robot contacts |
 
-The end-effector offsets in `get_end_effector_poses` are specific to a Franka Emika Panda with the stock fingers.
+The default `G_DELTA` and `G_DELTA_INTER` are for a Franka Emika Panda with the stock fingers. The threshold that decides which grid cells join the grasping region (0.7 of the maximum metric) is set in `run_pickup()` and `run_gcsm()`.
 
 ## Repository Structure
 
 ```
 main_pickup.py            Entry point: pure translation task screw
 main_gcsm.py              Entry point: general constant screw motion
+pickup_runner.py          run_pickup(): the computation behind main_pickup.py, without plotting
+gcsm_runner.py            run_gcsm(): the computation behind main_gcsm.py, without plotting
+config.py                 SOCP and gripper parameters
 socp_module/              The SOCP itself (grasp map, friction cones, solve)
 point_cloud_module/       Point cloud processing, bounding boxes, grasping region,
                           end-effector pose computation
@@ -94,10 +89,7 @@ func/                     Quaternion / dual quaternion / ScLERP utilities, plott
 matlab_helper_funcs/      MATLAB plotting helpers
 visualize_results.m       MATLAB visualization of a logged trial
 nontextured.ply           Example object point cloud
-config.py                 SOCP and gripper parameters
-Dockerfile                Container image: ROS 2 plus this code
-docker-compose.yml        Container settings, including ROS 2 communication between containers
-docker/                   Fast DDS profile for forcing UDP between containers
+environment.yml           Conda environment
 ```
 
 ## Citation
@@ -140,39 +132,6 @@ Related papers:
 ```
 
 A journal version of this paper is under preparation.
-
-## Running with Docker
-
-A Docker setup based on ROS 2 Humble is included. It is meant for running this
-code on an NVIDIA Jetson Orin alongside other ROS 2 containers (for example, a
-perception node), but it works on any machine with Docker. So far it has been
-tested on an Apple Silicon Mac, which has the same CPU architecture as the
-Jetson (linux/arm64). It has not been tested on a Jetson yet.
-
-Build the image (the first build takes several minutes):
-
-```bash
-docker compose build
-```
-
-Run the examples. Output is written to `logs/` on your machine:
-
-```bash
-docker compose run --rm tograsp
-docker compose run --rm tograsp python3 main_gcsm.py --trial 1 --log-dir /app/logs
-```
-
-Check that two containers can talk to each other over ROS 2. `pong` should
-print `data: ping` once a second:
-
-```bash
-docker compose --profile plumbing up ping pong
-```
-
-The containers use host networking and host IPC so that ROS 2 can communicate
-between them; the comments in `docker-compose.yml` explain each setting. To use
-a different ROS 2 distribution, change `ROS_DISTRO` in `docker-compose.yml`
-(for example to `jazzy`) and rebuild.
 
 ## License
 
